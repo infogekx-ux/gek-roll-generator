@@ -274,7 +274,8 @@ app.post('/generate-roll', async (req, res) => {
         height: canvasH,
         channels: 4,
         background: { r: 0, g: 0, b: 0, alpha: 0 } // Transparent — DigiRIP handles white underbase
-      }
+      },
+      limitInputPixels: false
     })
     .composite(composites)
     .png({ 
