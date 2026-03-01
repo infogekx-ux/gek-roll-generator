@@ -1,6 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 const sharp = require('sharp');
+
+// Allow massive images - DTF rolls can be 30m+ (1.5 billion pixels)
+sharp.limitInputPixels(false);  // Disable input pixel limit
+sharp.cache(false);             // Disable cache for large images to save RAM
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
@@ -211,7 +215,7 @@ app.post('/generate-roll', async (req, res) => {
       const y = Math.round(item.y * PX_PER_CM) + totalOffsetPx;
 
       try {
-        let imgPipeline = sharp(buf);
+        let imgPipeline = sharp(buf, { limitInputPixels: false });
         
         // Rotate if needed
         if (item.rotated) {
