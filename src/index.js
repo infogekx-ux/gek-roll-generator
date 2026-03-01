@@ -306,7 +306,7 @@ app.post('/generate-roll', async (req, res) => {
     for (let rollIdx = 0; rollIdx < totalRolls; rollIdx++) {
       const rollItems = rollGroups[rollIdx];
       const rollNum = rollIdx + 1;
-      const rollLabel = totalRolls > 1 ? `Rolka ${rollNum}/${totalRolls}` : '';
+      const rollLabel = totalRolls > 1 ? `Roll ${rollNum}/${totalRolls}` : '';
       const rollYOffset = rollItems.length > 0 ? rollItems[0].y : 0;
 
       console.log(`[ROLL] Generating roll ${rollNum}/${totalRolls}...`);
