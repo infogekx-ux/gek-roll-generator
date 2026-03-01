@@ -21,7 +21,7 @@ const PX_PER_CM = 118.11; // 300 DPI
 const LABEL_HEIGHT_CM = 3;
 const GAP_AFTER_LABEL_CM = 1;
 const BOTTOM_GAP_CM = 0.5;
-const MAX_ROLL_LENGTH_CM = 2000; // 20 meter max per roll
+const MAX_ROLL_LENGTH_CM = 1000; // 10 meter max per roll
 
 // ===== HEALTH CHECK =====
 app.get('/', (req, res) => {
