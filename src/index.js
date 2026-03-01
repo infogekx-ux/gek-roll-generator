@@ -203,7 +203,8 @@ async function generateRollImage({
     limitInputPixels: false
   })
   .composite(composites)
-  .png({ compressionLevel: 6, density: 300 })
+  .withMetadata({ density: 300 })
+  .png({ compressionLevel: 6 })
   .toBuffer();
 
   return { rollPng, canvasH, contentHeightCm };
