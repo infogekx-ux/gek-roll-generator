@@ -3,8 +3,9 @@ const cors = require('cors');
 const sharp = require('sharp');
 
 // Allow massive images - DTF rolls can be 30m+ (1.5 billion pixels)
-sharp.limitInputPixels(false);  // Disable input pixel limit
+// sharp v0.33+ removed static limitInputPixels — set per instance instead
 sharp.cache(false);             // Disable cache for large images to save RAM
+const SHARP_OPTS = { limitInputPixels: false }; // Pass to every sharp() call
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
@@ -100,7 +101,7 @@ app.post('/generate-roll', async (req, res) => {
         const logoResp = await fetch(config.printerLogo);
         if (logoResp.ok) {
           const logoBuf = Buffer.from(await logoResp.arrayBuffer());
-          logoMeta = await sharp(logoBuf).metadata();
+          logoMeta = await sharp(logoBuf, SHARP_OPTS).metadata();
           logoBuffer = logoBuf;
         }
       } catch (e) {
@@ -186,7 +187,7 @@ app.post('/generate-roll', async (req, res) => {
 
     // Logo in top label
     if (logoBuffer) {
-      const resizedLogo = await sharp(logoBuffer)
+      const resizedLogo = await sharp(logoBuffer, SHARP_OPTS)
         .resize(logoWidthInLabel, logoHeightInLabel, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
         .png()
         .toBuffer();
@@ -253,7 +254,7 @@ app.post('/generate-roll', async (req, res) => {
 
     // Logo in bottom label
     if (logoBuffer) {
-      const resizedLogo2 = await sharp(logoBuffer)
+      const resizedLogo2 = await sharp(logoBuffer, SHARP_OPTS)
         .resize(logoWidthInLabel, logoHeightInLabel, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
         .png()
         .toBuffer();
