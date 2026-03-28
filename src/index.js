@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const sharp = require('sharp');
+const multer = require('multer');
+const tiffUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 200 * 1024 * 1024 } });
 
 sharp.cache(false);
 const SHARP_OPTS = { limitInputPixels: false };
@@ -49,7 +51,7 @@ async function getCachedLogo(url) {
 app.get('/', (req, res) => {
   res.json({ 
     service: 'GEK Roll Generator', 
-    version: '3.0.0',
+    version: '3.1.0',
     status: 'ok',
     maxRollLength: MAX_ROLL_LENGTH_CM + 'cm',
     timestamp: new Date().toISOString()
@@ -377,9 +379,83 @@ app.post('/generate-roll', async (req, res) => {
   }
 });
 
+// ===== TIFF CONVERTER (server-side, no browser canvas limits) =====
+app.post('/convert-tiff', tiffUpload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const startTime = Date.now();
+    const originalName = req.file.originalname || 'output.png';
+    console.log(`[TIFF] Converting: ${originalName} (${(req.file.size / 1024 / 1024).toFixed(1)} MB)`);
+
+    const inputBuffer = req.file.buffer;
+    const meta = await sharp(inputBuffer, { limitInputPixels: false }).metadata();
+    const { width, height } = meta;
+    const dpi = meta.density || 300;
+
+    console.log(`[TIFF] Dimensions: ${width}x${height} @ ${dpi} DPI (${(width * height / 1e6).toFixed(1)}M pixels)`);
+
+    // Get raw RGBA pixels
+    const { data: rgba } = await sharp(inputBuffer, { limitInputPixels: false })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    // White fix — same logic as client-side TIFF Converter
+    const rgb = Buffer.alloc(width * height * 3);
+    let whiteFixed = 0;
+    let transparentFixed = 0;
+
+    for (let i = 0, j = 0; i < rgba.length; i += 4, j += 3) {
+      const r = rgba[i], g = rgba[i + 1], b = rgba[i + 2], a = rgba[i + 3];
+      if (a < 10) {
+        // Transparent → pure white (no ink for FlexiRIP)
+        rgb[j] = 255; rgb[j + 1] = 255; rgb[j + 2] = 255;
+        transparentFixed++;
+      } else if (r === 255 && g === 255 && b === 255) {
+        // Design white → 252 blue (FlexiRIP sees as color → prints white ink)
+        rgb[j] = 255; rgb[j + 1] = 255; rgb[j + 2] = 252;
+        whiteFixed++;
+      } else {
+        rgb[j] = r; rgb[j + 1] = g; rgb[j + 2] = b;
+      }
+    }
+
+    console.log(`[TIFF] White fix: ${whiteFixed.toLocaleString()} white, ${transparentFixed.toLocaleString()} transparent`);
+
+    // Build TIFF — uncompressed RGB 8-bit (FlexiRIP compatible)
+    const tiffBuffer = await sharp(rgb, {
+      raw: { width, height, channels: 3 }
+    })
+      .withMetadata({ density: dpi })
+      .tiff({ compression: 'none', bitdepth: 8 })
+      .toBuffer();
+
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`[TIFF] Done: ${(tiffBuffer.length / 1024 / 1024).toFixed(1)} MB in ${elapsed}s`);
+
+    const outputName = originalName.replace(/\.png$/i, '') + '_FLEXIRIP.tiff';
+    res.setHeader('Content-Type', 'image/tiff');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(outputName)}"`);
+    res.setHeader('X-White-Fixed', whiteFixed.toString());
+    res.setHeader('X-Transparent-Fixed', transparentFixed.toString());
+    res.setHeader('X-DPI', dpi.toString());
+    res.setHeader('X-Dimensions', `${width}x${height}`);
+    res.setHeader('X-Elapsed', elapsed);
+    res.send(tiffBuffer);
+
+  } catch (err) {
+    console.error('[TIFF] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ===== START =====
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🖨️ GEK Roll Generator v3.0.0 running on port ${PORT}`);
-  console.log(`   Max roll: ${MAX_ROLL_LENGTH_CM}cm | Optimizations: parallel I/O, resize cache, logo cache, PNG compression 9`);
+  console.log(`🖨️ GEK Roll Generator v3.1.0 running on port ${PORT}`);
+  console.log(`   Max roll: ${MAX_ROLL_LENGTH_CM}cm | TIFF Converter: /convert-tiff`);
 });
+
