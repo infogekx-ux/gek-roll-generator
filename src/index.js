@@ -427,7 +427,8 @@ app.post('/convert-tiff', tiffUpload.single('file'), async (req, res) => {
 
     // Build TIFF — uncompressed RGB 8-bit (FlexiRIP compatible)
     const tiffBuffer = await sharp(rgb, {
-      raw: { width, height, channels: 3 }
+      raw: { width, height, channels: 3 },
+      limitInputPixels: false
     })
       .withMetadata({ density: dpi })
       .tiff({ compression: 'none', bitdepth: 8 })
