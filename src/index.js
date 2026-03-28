@@ -284,8 +284,9 @@ app.post('/generate-roll', async (req, res) => {
     }
     const textStartX = Math.round(PX_PER_CM * 0.5) + logoOffsetPx;
 
-    const dateStr = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' }) 
-      + ' ' + new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+    const _now = new Date();
+    const dateStr = _now.getFullYear() + '-' + ('0'+(_now.getMonth()+1)).slice(-2) + '-' + ('0'+_now.getDate()).slice(-2)
+      + ' ' + ('0'+_now.getHours()).slice(-2) + ':' + ('0'+_now.getMinutes()).slice(-2);
     const custName = customer?.name || '';
     const custCompany = customer?.company || '';
     const infoLines = {
@@ -306,7 +307,8 @@ app.post('/generate-roll', async (req, res) => {
     timer('Pre-resize');
 
     // ===== GENERATE ALL ROLLS IN PARALLEL =====
-    const timestamp = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
+    const _ts = new Date();
+    const timestamp = _ts.getFullYear() + '-' + ('0'+(_ts.getMonth()+1)).slice(-2) + '-' + ('0'+_ts.getDate()).slice(-2);
     const companySlug = custCompany ? custCompany.replace(/[^a-zA-Z0-9]/g, '_') + '_' : '';
     const nameSlug = custName.replace(/[^a-zA-Z0-9]/g, '_');
 
