@@ -7,6 +7,7 @@ const tiffUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize:
 sharp.cache(false);
 const SHARP_OPTS = { limitInputPixels: false };
 const { createClient } = require('@supabase/supabase-js');
+const { PRICING, quote } = require('./pricing');
 
 const app = express();
 app.use(cors());
@@ -59,6 +60,71 @@ app.get('/', (req, res) => {
 });
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
+// ===== PRICING (public) =====
+app.get('/pricing', (req, res) => {
+  res.json({ pricing: PRICING, vatRate: 0.21, generatedAt: new Date().toISOString() });
+});
+
+// ===== INSTANT QUOTE =====
+// POST /quote { type: 'dtf'|'uvdtf', meters: 2.5, express: false }
+app.post('/quote', (req, res) => {
+  const { type, meters, express } = req.body || {};
+  if (!type || meters == null) {
+    return res.status(400).json({ error: 'type and meters are required' });
+  }
+  if (!['dtf', 'uvdtf'].includes(type)) {
+    return res.status(400).json({ error: "type must be 'dtf' or 'uvdtf'" });
+  }
+  const m = Number(meters);
+  if (!Number.isFinite(m) || m <= 0) {
+    return res.status(400).json({ error: 'meters must be a positive number' });
+  }
+  const result = quote(type, m, Boolean(express));
+  if (result.error) return res.status(404).json(result);
+  res.json(result);
+});
+
+// ===== TIFF LAB AUTH HELPER =====
+// Validates X-API-Key against tiff_keys table, enforces monthly quota.
+// Returns { ok: true, key } when authorised, or sends an error response and returns null.
+async function authoriseTiffKey(req, res) {
+  const apiKey = req.header('X-API-Key');
+
+  // No key supplied -> allow legacy/free path (caller's choice). Free path is rate-limited elsewhere.
+  if (!apiKey) return { ok: true, key: null };
+
+  if (!SB_KEY) {
+    res.status(503).json({ error: 'TIFF Lab auth unavailable: SUPABASE_SERVICE_KEY not configured' });
+    return null;
+  }
+
+  const { data, error } = await sb.from('tiff_keys').select('*').eq('api_key', apiKey).maybeSingle();
+  if (error) {
+    res.status(500).json({ error: `Auth lookup failed: ${error.message}` });
+    return null;
+  }
+  if (!data || !data.active) {
+    res.status(401).json({ error: 'Invalid or inactive API key' });
+    return null;
+  }
+
+  // Monthly reset
+  if (new Date(data.reset_at) <= new Date()) {
+    const nextReset = new Date();
+    nextReset.setUTCMonth(nextReset.getUTCMonth() + 1, 1);
+    nextReset.setUTCHours(0, 0, 0, 0);
+    await sb.from('tiff_keys').update({ used_this_month: 0, reset_at: nextReset.toISOString() }).eq('id', data.id);
+    data.used_this_month = 0;
+  }
+
+  if (data.quota_monthly !== -1 && data.used_this_month >= data.quota_monthly) {
+    res.status(402).json({ error: 'Monthly quota exceeded', plan: data.plan, quota: data.quota_monthly });
+    return null;
+  }
+
+  return { ok: true, key: data };
+}
 
 // ===== HELPER: Escape SVG text =====
 function escSvg(s) {
@@ -388,6 +454,10 @@ app.post('/convert-tiff', tiffUpload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
+    // TIFF Lab auth (optional — present key = paid tier, no key = free legacy flow).
+    const auth = await authoriseTiffKey(req, res);
+    if (!auth) return; // response already sent
+
     const startTime = Date.now();
     const originalName = req.file.originalname || 'output.png';
     console.log(`[TIFF] Converting: ${originalName} (${(req.file.size / 1024 / 1024).toFixed(1)} MB)`);
@@ -447,7 +517,20 @@ app.post('/convert-tiff', tiffUpload.single('file'), async (req, res) => {
     res.setHeader('X-DPI', dpi.toString());
     res.setHeader('X-Dimensions', `${width}x${height}`);
     res.setHeader('X-Elapsed', elapsed);
+    if (auth.key) {
+      res.setHeader('X-TIFF-Plan', auth.key.plan);
+      res.setHeader('X-TIFF-Quota-Used', String(auth.key.used_this_month + 1));
+      res.setHeader('X-TIFF-Quota-Total', String(auth.key.quota_monthly));
+    }
     res.send(tiffBuffer);
+
+    // Increment quota AFTER successful send (fire-and-forget).
+    if (auth.key) {
+      sb.from('tiff_keys')
+        .update({ used_this_month: auth.key.used_this_month + 1 })
+        .eq('id', auth.key.id)
+        .then(({ error }) => { if (error) console.warn(`[TIFF] Quota update failed: ${error.message}`); });
+    }
 
   } catch (err) {
     console.error('[TIFF] Error:', err);
@@ -458,7 +541,8 @@ app.post('/convert-tiff', tiffUpload.single('file'), async (req, res) => {
 // ===== START =====
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🖨️ GEK Roll Generator v3.1.0 running on port ${PORT}`);
-  console.log(`   Max roll: ${MAX_ROLL_LENGTH_CM}cm | TIFF Converter: /convert-tiff`);
+  console.log(`🖨️ GEK Roll Generator v3.2.0 running on port ${PORT}`);
+  console.log(`   Max roll: ${MAX_ROLL_LENGTH_CM}cm`);
+  console.log(`   Endpoints: /generate-roll  /convert-tiff  /pricing  /quote`);
 });
 

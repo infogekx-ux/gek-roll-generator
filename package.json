@@ -1,7 +1,7 @@
 {
   "name": "gek-roll-generator",
-  "version": "3.1.0",
-  "description": "Server-side DTF/UV DTF roll image generator + TIFF converter for GEK-X",
+  "version": "3.2.0",
+  "description": "Server-side DTF/UV DTF roll image generator + TIFF converter + pricing/quote API for GEK-X",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
