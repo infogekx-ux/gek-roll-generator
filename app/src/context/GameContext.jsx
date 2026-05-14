@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { loadState, saveState, todayISO } from '../utils/storage.js';
 import { titleForStars } from '../data/titles.js';
+import { t as tRaw, uiLangFromNationality } from '../data/i18n.js';
 
 const GameContext = createContext(null);
 
@@ -8,17 +9,25 @@ export function GameProvider({ children }) {
   const [state, setState] = useState(() => loadState());
   const [screen, setScreen] = useState('boot');
   const [currentLevelId, setCurrentLevelId] = useState(1);
+  const [lang, setLang] = useState('NL');
 
-  // Boot routing
+  // Boot routing + initial language
   useEffect(() => {
-    if (state.player) setScreen('dashboard');
-    else setScreen('onboarding');
+    if (state.player) {
+      setScreen('dashboard');
+      const stored = state.player.uiLang || uiLangFromNationality(state.player.nationality || 'NL');
+      setLang(stored);
+    } else {
+      setScreen('onboarding');
+    }
   }, []); // eslint-disable-line
 
   // Persist
   useEffect(() => { saveState(state); }, [state]);
 
-  function registerPlayer({ email, nickname, company, nationality }) {
+  function registerPlayer({ email, nickname, company, nationality, uiLang }) {
+    const language = uiLang || uiLangFromNationality(nationality || 'NL');
+    setLang(language);
     setState(s => ({
       ...s,
       player: {
@@ -26,6 +35,7 @@ export function GameProvider({ children }) {
         nickname: nickname.trim(),
         company: (company || '').trim(),
         nationality: nationality || 'NL',
+        uiLang: language,
         createdAt: new Date().toISOString(),
       },
       lastPlayedDate: todayISO(),
@@ -33,6 +43,11 @@ export function GameProvider({ children }) {
     }));
     setCurrentLevelId(1);
     setScreen('level');
+  }
+
+  function changeLanguage(newLang) {
+    setLang(newLang);
+    setState(s => s.player ? { ...s, player: { ...s.player, uiLang: newLang } } : s);
   }
 
   function startLevel(levelId) {
@@ -51,7 +66,6 @@ export function GameProvider({ children }) {
       const newBest = Math.max(prev.bestScore, score);
       const starsDelta = newStars - prev.stars;
 
-      // Streak update
       const today = todayISO();
       let streak = s.streakDays;
       if (s.lastPlayedDate !== today) {
@@ -60,7 +74,6 @@ export function GameProvider({ children }) {
         else streak = 1;
       }
 
-      // Leaderboard local update
       const lb = [...(s.leaderboard || [])];
       lb.push({
         nickname: s.player?.nickname || 'anon',
@@ -70,7 +83,6 @@ export function GameProvider({ children }) {
         levelId,
         when: new Date().toISOString(),
       });
-      // sort + cap
       lb.sort((a, b) => b.score - a.score);
       const trimmed = lb.slice(0, 50);
 
@@ -101,6 +113,9 @@ export function GameProvider({ children }) {
     }
   }
 
+  // Memoized translator
+  const t = useCallback(key => tRaw(key, lang), [lang]);
+
   const value = {
     state,
     screen,
@@ -112,6 +127,9 @@ export function GameProvider({ children }) {
     completeLevel,
     resetAll,
     title: titleForStars(state.starsTotal || 0),
+    lang,
+    changeLanguage,
+    t,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
@@ -121,4 +139,10 @@ export function useGame() {
   const ctx = useContext(GameContext);
   if (!ctx) throw new Error('useGame buiten provider');
   return ctx;
+}
+
+// Convenience hook
+export function useT() {
+  const { t, lang } = useGame();
+  return { t, lang };
 }

@@ -1,26 +1,23 @@
 import React from 'react';
 import { useGame } from '../context/GameContext.jsx';
-import { LEVELS } from '../data/levels.js';
+import { getLevelNew, LEVELS_NEW } from '../data/scenes.js';
+import { LANGUAGES } from '../data/i18n.js';
 import DisclaimerBar from '../components/DisclaimerBar.jsx';
 import { sfx } from '../utils/audio.js';
 
 export default function Dashboard() {
-  const { state, startLevel, title, resetAll } = useGame();
+  const { state, startLevel, title, resetAll, t, lang, changeLanguage } = useGame();
   const player = state.player;
   const eur = (state.euroSaved || 0).toLocaleString('nl-NL');
 
   function lvlLocked(id) {
     if (id === 1) return false;
-    if (id === 2) return false; // MVP: 1 + 2 open. Hogere locked.
-    // Voor hogere levels (later toegevoegd): vereisen 2*(N-1) sterren
+    if (id === 2) return false;
     return true;
   }
 
   function onPlay(id) {
-    if (lvlLocked(id)) {
-      sfx.wrong();
-      return;
-    }
+    if (lvlLocked(id)) { sfx.wrong(); return; }
     sfx.click();
     startLevel(id);
   }
@@ -39,23 +36,34 @@ export default function Dashboard() {
             <span className="tag">🔥 {state.streakDays || 0}d</span>
           </div>
         </div>
+        <select
+          value={lang}
+          onChange={(e) => changeLanguage(e.target.value)}
+          style={{
+            background: '#222', color: '#fff', border: '1px solid #444',
+            padding: '4px 8px', borderRadius: 8, fontSize: 12
+          }}
+        >
+          {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.code}</option>)}
+        </select>
       </div>
 
       <div className="card">
-        <div className="muted">Totaal "bespaarde" belasting</div>
+        <div className="muted">{t('d_saved')}</div>
         <div className="big-num">€ {eur}</div>
         <div className="muted" style={{ marginTop: 4 }}>
-          {state.starsTotal || 0} ⭐ verzameld · {state.scoreTotal || 0} pts totaal
+          {state.starsTotal || 0} ⭐ · {state.scoreTotal || 0} {t('points')}
         </div>
       </div>
 
-      <h3 style={{ margin: '14px 0 8px' }}>Levels</h3>
+      <h3 style={{ margin: '14px 0 8px' }}>{t('d_levels')}</h3>
       <div className="level-grid">
         {Array.from({ length: 10 }).map((_, i) => {
           const id = i + 1;
-          const lvl = LEVELS.find(l => l.id === id);
+          const lvl = getLevelNew(id);
           const locked = lvlLocked(id);
           const stars = state.levels?.[id]?.stars || 0;
+          const ttl = lvl ? (lvl.title?.[lang] || lvl.title?.NL) : 'Coming soon';
           return (
             <button
               key={id}
@@ -64,9 +72,7 @@ export default function Dashboard() {
               disabled={locked}
             >
               <div className="level-tile__num">{id}</div>
-              <div style={{ fontSize: 11, lineHeight: 1.1, minHeight: 28 }}>
-                {lvl ? lvl.title : 'Coming soon'}
-              </div>
+              <div style={{ fontSize: 11, lineHeight: 1.1, minHeight: 28 }}>{ttl}</div>
               <div className="stars">
                 {locked ? '🔒' : '⭐'.repeat(stars) + '☆'.repeat(3 - stars)}
               </div>
@@ -76,21 +82,18 @@ export default function Dashboard() {
       </div>
 
       <div className="weekly-card" style={{ marginTop: 14 }}>
-        <h3>🗓️ Weekly Challenge</h3>
+        <h3>{t('d_weekly')}</h3>
         <div style={{ fontSize: 14, marginTop: 4 }}>
-          <strong>Level 2 — BTW basics in &lt; 60s</strong>
+          <strong>{t('d_weeklyDesc')}</strong>
         </div>
         <div className="muted" style={{ color: '#FFC107' }}>
-          Sponsor: Jouw lokale boekhouder (coming soon)
-        </div>
-        <div className="muted" style={{ color: '#fff', marginTop: 4 }}>
-          Prijs: 1u gratis advies (binnenkort echt)
+          {t('d_weeklySpon')}
         </div>
       </div>
 
-      <h3 style={{ margin: '14px 0 8px' }}>🏆 Leaderboard (lokaal)</h3>
+      <h3 style={{ margin: '14px 0 8px' }}>{t('d_leader')}</h3>
       <div className="card">
-        {lb.length === 0 && <div className="muted">Nog niemand. Wees jij de eerste. Of de enige.</div>}
+        {lb.length === 0 && <div className="muted">{t('d_leaderEmpty')}</div>}
         {lb.map((row, i) => {
           const me = row.nickname === player?.nickname;
           return (
@@ -99,7 +102,7 @@ export default function Dashboard() {
                 <strong>#{i + 1}</strong> {row.nickname}
                 {row.company ? <span className="muted"> · {row.company}</span> : null}
               </div>
-              <div>{row.score} <span className="muted">pts</span></div>
+              <div>{row.score} <span className="muted">{t('points')}</span></div>
             </div>
           );
         })}
@@ -107,7 +110,7 @@ export default function Dashboard() {
 
       <div style={{ marginTop: 12 }}>
         <button className="btn btn--ghost" onClick={resetAll}>
-          🧨 Reset alles (alleen voor dappere zielen)
+          {t('d_resetAll')}
         </button>
       </div>
 
