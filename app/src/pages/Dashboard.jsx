@@ -1,15 +1,27 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useGame } from '../context/GameContext.jsx';
 import { getLevelNew } from '../data/scenes.js';
 import { LANGUAGES } from '../data/i18n.js';
 import { eggsList } from '../data/easterEggs.js';
 import DisclaimerBar from '../components/DisclaimerBar.jsx';
+import StreakBanner from '../components/StreakBanner.jsx';
+import { fetchWeeklyActiveCount } from '../lib/supabase.js';
+import { todayISO } from '../utils/storage.js';
 import { sfx } from '../utils/audio.js';
 
 export default function Dashboard() {
   const { state, profile, startLevel, title, resetAll, t, lang, changeLanguage, totalScore, online, setScreen } = useGame();
   const player = profile || state.player;
   const eur = (state.euroSaved || 0).toLocaleString('nl-NL');
+  const [weeklyActive, setWeeklyActive] = useState(null);
+
+  useEffect(() => {
+    if (!online) return;
+    fetchWeeklyActiveCount().then(setWeeklyActive);
+  }, [online]);
+
+  // Daily Quest: any level played today?
+  const playedToday = (profile?.streak_last_date === todayISO()) || (state.lastPlayedDate === todayISO());
 
   function lvlLocked(id) {
     if (id === 1 || id === 2) return false;
@@ -53,11 +65,43 @@ export default function Dashboard() {
         </select>
       </div>
 
+      <StreakBanner />
+
+      <div className={`daily-quest ${playedToday ? 'daily-quest--done' : 'daily-quest--open'}`}>
+        <div className="daily-quest__icon">{playedToday ? '✅' : '⚡'}</div>
+        <div className="daily-quest__body">
+          <div className="daily-quest__title">
+            {lang === 'PL' && 'Dzienny challenge'}
+            {lang === 'EN' && 'Daily Quest'}
+            {lang === 'NL' && 'Dagelijkse uitdaging'}
+          </div>
+          <div className="daily-quest__sub">
+            {playedToday ? (
+              lang === 'PL' ? 'Zaliczone. Wujek stawia.'
+              : lang === 'EN' ? 'Done. Uncle Jan is buying.'
+              : 'Klaar. Ome Jan trakteert.'
+            ) : (
+              lang === 'PL' ? 'Zagraj 1 poziom dziś.'
+              : lang === 'EN' ? 'Play 1 level today.'
+              : 'Speel 1 level vandaag.'
+            )}
+          </div>
+        </div>
+        {!playedToday && (
+          <button className="btn" style={{ width: 'auto', padding: '8px 12px', fontSize: 13 }} onClick={() => { sfx.click(); onPlay(1); }}>
+            ▶
+          </button>
+        )}
+      </div>
+
       <div className="card">
         <div className="muted">{t('d_saved')}</div>
         <div className="big-num">{totalScore} {t('points')}</div>
         <div className="muted" style={{ marginTop: 4 }}>
           € {eur} · 🪙 {profile?.lulcoins_balance ?? 100} LC
+          {weeklyActive != null && (
+            <> · 👥 {weeklyActive} {lang === 'PL' ? 'graczy w tym tyg.' : lang === 'EN' ? 'players this week' : 'spelers deze week'}</>
+          )}
         </div>
       </div>
 

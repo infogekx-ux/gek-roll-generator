@@ -54,7 +54,7 @@ export default function FacturenSortScene({ scene, player, onComplete, onAbort }
       sfx.wrong();
       setLightningKey(k => k + 1);
       setRage(r => Math.max(0, r - 1));
-      setInspecteurLine(pickInspecteurQuote(nationality, 3));
+      setInspecteurLine(pickInspecteurQuote(nationality, Math.min(5, rage + 1)));
     }
 
     setExplainOverlay({
@@ -135,6 +135,7 @@ export default function FacturenSortScene({ scene, player, onComplete, onAbort }
               key={item.id}
               id={item.id}
               onDrop={onDrop}
+              disabled={!!explainOverlay || finished}
               className="invoice-card"
             >
               <div className="invoice-icon">📄</div>

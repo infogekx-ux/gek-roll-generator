@@ -1,5 +1,5 @@
 // LULBAL service worker — basic offline-first caching for app shell.
-const CACHE = 'lulbal-v1';
+const CACHE = 'lulbal-v2';
 const PRECACHE = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg'];
 
 self.addEventListener('install', (e) => {

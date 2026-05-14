@@ -49,8 +49,13 @@ export default function AangifteScene({ scene, player, onComplete, onAbort }) {
       body: it.explain?.[lang] || it.explain?.NL,
     });
 
+    // Mark "ready to advance" — dismissExplain advances. Safety timeout 5s
+    // in case user doesn't tap.
     if (Object.keys(incomeResults).length + 1 >= scene.incomeItems.length) {
-      setTimeout(() => { setExplainOverlay(null); setPhase('aftrek'); }, 1800);
+      setTimeout(() => {
+        setExplainOverlay(curr => curr ? null : curr);
+        setPhase(p => p === 'income' ? 'aftrek' : p);
+      }, 5000);
     }
   }
 
@@ -76,8 +81,11 @@ export default function AangifteScene({ scene, player, onComplete, onAbort }) {
   }
 
   function dismissExplain() {
+    sfx.click();
     setExplainOverlay(null);
-    if (phase === 'aftrek' && Object.keys(aftrekResults).length >= scene.aftrekItems.length) {
+    if (phase === 'income' && Object.keys(incomeResults).length >= scene.incomeItems.length) {
+      setPhase('aftrek');
+    } else if (phase === 'aftrek' && Object.keys(aftrekResults).length >= scene.aftrekItems.length) {
       setPhase('submit');
     }
   }
@@ -104,12 +112,12 @@ export default function AangifteScene({ scene, player, onComplete, onAbort }) {
 
       <EasterEgg
         eggId="koffiezetapparaat"
-        style={{ position: 'absolute', top: 60, right: 10, zIndex: 6 }}
+        style={{ position: 'absolute', bottom: 90, right: 12, zIndex: 6 }}
         onCaught={() => { setRage(r => Math.min(5, r + 1)); setLightningKey(k => k + 1); }}
       />
       <EasterEgg
         eggId="prullenbak"
-        style={{ position: 'absolute', top: 60, left: 10, zIndex: 6 }}
+        style={{ position: 'absolute', bottom: 90, left: 12, zIndex: 6 }}
         onCaught={() => { setRage(r => Math.min(5, r + 1)); setLightningKey(k => k + 1); }}
       />
 
@@ -123,6 +131,7 @@ export default function AangifteScene({ scene, player, onComplete, onAbort }) {
                   key={item.id}
                   id={item.id}
                   onDrop={onIncomeDrop}
+                  disabled={!!explainOverlay}
                   className="income-card"
                 >
                   <div className="invoice-icon">💰</div>

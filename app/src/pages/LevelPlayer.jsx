@@ -8,6 +8,7 @@ import AangifteScene from '../scenes/AangifteScene.jsx';
 import DisclaimerBar from '../components/DisclaimerBar.jsx';
 import Confetti from '../components/Confetti.jsx';
 import ShareButton from '../components/ShareButton.jsx';
+import PerfectRoundOverlay from '../components/PerfectRoundOverlay.jsx';
 import { starsFor, euroFromScore } from '../utils/scoring.js';
 import { sfx } from '../utils/audio.js';
 
@@ -25,6 +26,7 @@ export default function LevelPlayer() {
   const [sceneIdx, setSceneIdx] = useState(0);
   const [sceneScores, setSceneScores] = useState([]); // [{ sceneId, score, maxScore }]
   const [done, setDone] = useState(false);
+  const [done2Acked, setDone2Acked] = useState(false);
 
   if (!level) {
     return (
@@ -69,6 +71,13 @@ export default function LevelPlayer() {
     return (
       <div className="app-shell">
         <Confetti trigger={1} count={120} />
+        <PerfectRoundOverlay
+          open={stars === 3 && !done2Acked}
+          score={totalScore}
+          levelId={level.id}
+          levelTitle={titleStr}
+          onClose={() => setDone2Acked(true)}
+        />
         <h1 style={{ marginTop: 16, textAlign: 'center' }}>{t('levelComplete')}</h1>
         <p className="muted" style={{ textAlign: 'center', fontSize: 18 }}>{titleStr}</p>
         <div className="card" style={{ textAlign: 'center', marginTop: 14 }}>

@@ -250,6 +250,24 @@ export async function fetchWeeklyLeaderboard(limit = 50) {
   return data || [];
 }
 
+// Count of players with weekly leaderboard rows in current ISO week+year.
+export async function fetchWeeklyActiveCount() {
+  if (!supabase) return null;
+  const now = new Date();
+  const isoYear = now.getUTCFullYear();
+  const isoWeek = getISOWeek(now);
+  const { count, error } = await supabase
+    .from('lulbal_leaderboard_weekly')
+    .select('user_id', { count: 'exact', head: true })
+    .eq('year', isoYear)
+    .eq('week_number', isoWeek);
+  if (error) {
+    console.warn('[LULBAL] fetchWeeklyActiveCount error', error);
+    return null;
+  }
+  return count;
+}
+
 export async function fetchMyProgress() {
   if (!supabase) return [];
   const { data: { session } } = await supabase.auth.getSession();

@@ -66,12 +66,12 @@ export default function BrievenbusScene({ scene, player, onComplete, onAbort }) 
 
           <EasterEgg
             eggId="telefoon"
-            style={{ position: 'absolute', top: 70, right: 10, zIndex: 6 }}
+            style={{ position: 'absolute', bottom: 80, right: 12, zIndex: 6 }}
             onCaught={() => { setRage(r => Math.min(5, r + 2)); setLightningKey(k => k + 1); }}
           />
           <EasterEgg
             eggId="biertje"
-            style={{ position: 'absolute', top: 70, left: 10, zIndex: 6 }}
+            style={{ position: 'absolute', bottom: 80, left: 12, zIndex: 6 }}
             onCaught={() => { setRage(r => Math.min(5, r + 1)); setLightningKey(k => k + 1); }}
           />
 

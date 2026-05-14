@@ -71,21 +71,19 @@ export default function BouwmarktScene({ scene, player, onComplete, onAbort }) {
   function bossDecide(claimBusiness) {
     if (!bossItem) return;
     const truth = bossItem.truthBusiness;
-    const playerTagged = cart[bossItem.id] === 'zakelijk';
-    // 'claimBusiness' = player verdedigt als zakelijk; otherwise admit private.
-    const claimed = claimBusiness;
-    // Correct if claim matches truth.
-    const isCorrect = claimed === truth;
+    const isCorrect = claimBusiness === truth;
+    const delta = isCorrect ? scene.defendCorrectPts : 0;
+    const newScore = score + delta;
 
     if (isCorrect) {
       sfx.correct();
       setConfettiKey(k => k + 1);
-      setScore(s => s + scene.defendCorrectPts);
-      setRage(r => Math.min(5, r + 1));   // inspecteur wordt rooder bij elke goede verdediging
+      setScore(newScore);
+      setRage(r => Math.min(5, r + 1));
     } else {
       sfx.wrong();
       setLightningKey(k => k + 1);
-      setRage(r => Math.max(0, r - 1));   // inspecteur is blij bij fout
+      setRage(r => Math.max(0, r - 1));
     }
 
     setInspecteurLine(pickInspecteurQuote(nationality, isCorrect ? Math.min(5, rage + 1) : Math.max(0, rage - 1)));
@@ -93,19 +91,18 @@ export default function BouwmarktScene({ scene, player, onComplete, onAbort }) {
       kind: isCorrect ? 'correct' : 'wrong',
       title: isCorrect ? `+${scene.defendCorrectPts} ${t('points')}` : t('wrong'),
       body: bossItem.explain?.[lang] || bossItem.explain?.NL,
-      next: () => advanceBoss(),
+      next: () => advanceBoss(newScore),
     });
   }
 
-  function advanceBoss() {
+  function advanceBoss(finalScore) {
     setExplainOverlay(null);
     if (bossIdx + 1 >= bossItems.length) {
-      // finalize
       sfx.levelUp();
       setPhase('done');
       onComplete({
         sceneId: scene.id,
-        score,
+        score: finalScore,
         maxScore: scene.maxScore,
       });
     } else {
@@ -130,15 +127,15 @@ export default function BouwmarktScene({ scene, player, onComplete, onAbort }) {
         <>
           <div className="scene-intro">{t('bm_intro')}</div>
 
-          {/* Easter eggs verstopt in de winkel */}
+          {/* Easter eggs verstopt in de winkel — onderaan zodat ze niet onder de inspecteur-corner verdwijnen */}
           <EasterEgg
             eggId="lichtschakelaar"
-            style={{ position: 'absolute', top: 60, right: 10, zIndex: 6 }}
+            style={{ position: 'absolute', bottom: 110, right: 12, zIndex: 6 }}
             onCaught={() => { setRage(r => Math.min(5, r + 2)); setLightningKey(k => k + 1); }}
           />
           <EasterEgg
             eggId="koffiezetapparaat"
-            style={{ position: 'absolute', top: 60, left: 10, zIndex: 6 }}
+            style={{ position: 'absolute', bottom: 110, left: 12, zIndex: 6 }}
             onCaught={() => { setRage(r => Math.min(5, r + 2)); setLightningKey(k => k + 1); }}
           />
 

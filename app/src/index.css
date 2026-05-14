@@ -493,6 +493,111 @@ input, select { font-family: inherit; font-size: 16px; }
   text-shadow: 4px 4px 0 #000; letter-spacing: 4px;
 }
 
+/* =================== STREAK BANNER =================== */
+.streak-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 2px solid #2a2a2a;
+  margin-bottom: 12px;
+  background: #161616;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.25;
+}
+.streak-banner--safe {
+  background: linear-gradient(135deg, #1a3a18, #0f2a0e);
+  border-color: var(--lb-green);
+  color: var(--lb-green);
+}
+.streak-banner--risk {
+  background: linear-gradient(135deg, #3a2510, #2a1a08);
+  border-color: var(--lb-orange);
+  color: var(--lb-orange);
+  animation: pulse 0.9s infinite alternate;
+}
+.streak-banner--lost {
+  background: linear-gradient(135deg, #3a1010, #2a0808);
+  border-color: var(--lb-red);
+  color: var(--lb-red);
+}
+.streak-banner--none {
+  color: #aaa;
+}
+.streak-banner__icon { font-size: 26px; }
+.streak-banner__text { flex: 1; }
+
+/* =================== DAILY QUEST =================== */
+.daily-quest {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: #131313;
+  border: 2px solid #2a2a2a;
+  border-radius: 14px;
+  margin-bottom: 12px;
+}
+.daily-quest--done { border-color: var(--lb-green); background: #0e1d10; }
+.daily-quest--open { border-color: var(--lb-yellow); background: #1a1408; }
+.daily-quest__icon { font-size: 26px; }
+.daily-quest__body { flex: 1; }
+.daily-quest__title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px;
+  letter-spacing: 1px;
+  color: var(--lb-yellow);
+}
+.daily-quest--done .daily-quest__title { color: var(--lb-green); }
+.daily-quest__sub { font-size: 13px; color: #ccc; }
+
+/* =================== PERFECT ROUND =================== */
+.perfect-overlay {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, #1a0e2a 0%, #000 70%);
+  z-index: 800;
+  display: flex; align-items: center; justify-content: center;
+  padding: 18px;
+  animation: fadeIn 350ms ease;
+}
+.perfect-card {
+  background: linear-gradient(135deg, #1f1f1f 0%, #0a0a0a 100%);
+  border: 4px solid var(--lb-yellow);
+  border-radius: 22px;
+  padding: 24px 18px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 0 60px rgba(255,193,7,0.5);
+  animation: achPop 380ms cubic-bezier(.34,1.56,.64,1);
+}
+.perfect-stars {
+  font-size: 48px;
+  letter-spacing: 8px;
+  animation: pulse 0.5s ease-in-out infinite alternate;
+}
+.perfect-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 42px;
+  letter-spacing: 3px;
+  color: var(--lb-yellow);
+  text-shadow: 3px 3px 0 #000;
+  line-height: 1;
+}
+.perfect-subtitle {
+  font-size: 14px;
+  color: #ccc;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+.perfect-body { font-size: 14px; color: #ddd; line-height: 1.45; }
+
 /* =================== LEADERBOARD TABS =================== */
 .lb-tabs {
   display: flex;
