@@ -6,11 +6,20 @@
     <meta name="theme-color" content="#000000" />
     <meta name="description" content="LULBAL — Speel met je belasting. De enige game waar je ZZP-belasting leert door de inspecteur te laten ontploffen." />
     <title>LULBAL — Speel met je belasting</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%23E53935'/><text x='32' y='42' font-family='Arial Black' font-size='34' text-anchor='middle' fill='%23fff' font-weight='900'>L</text></svg>" />
-    <script type="module" crossorigin src="/assets/index-D63_bFvv.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-Dq1MonAE.css">
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <script type="module" crossorigin src="/assets/index-DFH9-UD4.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CUa0eDwP.css">
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>

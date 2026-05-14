@@ -1,19 +1,18 @@
 import React from 'react';
 import { useGame } from '../context/GameContext.jsx';
-import { getLevelNew, LEVELS_NEW } from '../data/scenes.js';
+import { getLevelNew } from '../data/scenes.js';
 import { LANGUAGES } from '../data/i18n.js';
-import { EASTER_EGGS, eggsList } from '../data/easterEggs.js';
+import { eggsList } from '../data/easterEggs.js';
 import DisclaimerBar from '../components/DisclaimerBar.jsx';
 import { sfx } from '../utils/audio.js';
 
 export default function Dashboard() {
-  const { state, startLevel, title, resetAll, t, lang, changeLanguage } = useGame();
-  const player = state.player;
+  const { state, profile, startLevel, title, resetAll, t, lang, changeLanguage, totalScore, online, setScreen } = useGame();
+  const player = profile || state.player;
   const eur = (state.euroSaved || 0).toLocaleString('nl-NL');
 
   function lvlLocked(id) {
-    if (id === 1) return false;
-    if (id === 2) return false;
+    if (id === 1 || id === 2) return false;
     return true;
   }
 
@@ -23,18 +22,23 @@ export default function Dashboard() {
     startLevel(id);
   }
 
-  const lb = (state.leaderboard || []).slice(0, 10);
-
   return (
     <div className="app-shell">
       <div className="dash-hero">
-        <div className="avatar-circle">{player?.nickname?.[0]?.toUpperCase() || '?'}</div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 16, fontWeight: 800 }}>{player?.nickname}</div>
-          {player?.company ? <div className="muted">{player.company}</div> : null}
-          <div className="row" style={{ gap: 6, marginTop: 4 }}>
+        <div className="avatar-circle">{(player?.nickname || '?')[0]?.toUpperCase()}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 16, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {player?.nickname}
+          </div>
+          {(player?.company_name || player?.company) ? (
+            <div className="muted" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {player.company_name || player.company}
+            </div>
+          ) : null}
+          <div className="row" style={{ gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
             <span className="tag tag--gold">{title.label}</span>
-            <span className="tag">🔥 {state.streakDays || 0}d</span>
+            <span className="tag">🔥 {profile?.streak_days ?? state.streakDays ?? 0}d</span>
+            {online && <span className="tag tag--blue">☁️ online</span>}
           </div>
         </div>
         <select
@@ -51,9 +55,9 @@ export default function Dashboard() {
 
       <div className="card">
         <div className="muted">{t('d_saved')}</div>
-        <div className="big-num">€ {eur}</div>
+        <div className="big-num">{totalScore} {t('points')}</div>
         <div className="muted" style={{ marginTop: 4 }}>
-          {state.starsTotal || 0} ⭐ · {state.scoreTotal || 0} {t('points')}
+          € {eur} · 🪙 {profile?.lulcoins_balance ?? 100} LC
         </div>
       </div>
 
@@ -82,6 +86,14 @@ export default function Dashboard() {
         })}
       </div>
 
+      <button
+        className="btn btn--blue"
+        style={{ marginTop: 12 }}
+        onClick={() => { sfx.click(); setScreen('leaderboard'); }}
+      >
+        🏆 {lang === 'PL' ? 'Ranking online' : lang === 'EN' ? 'Online leaderboard' : 'Online leaderboard'}
+      </button>
+
       <div className="weekly-card" style={{ marginTop: 14 }}>
         <h3>{t('d_weekly')}</h3>
         <div style={{ fontSize: 14, marginTop: 4 }}>
@@ -93,7 +105,7 @@ export default function Dashboard() {
       </div>
 
       <h3 style={{ margin: '14px 0 8px' }}>
-        🏆 {lang === 'PL' ? 'Odznaki' : lang === 'EN' ? 'Achievements' : 'Achievements'}
+        🏆 {lang === 'PL' ? 'Odznaki' : 'Achievements'}
         {' '}
         <span className="muted">({Object.keys(state.achievements || {}).length} / {eggsList().length})</span>
       </h3>
@@ -114,23 +126,6 @@ export default function Dashboard() {
             );
           })}
         </div>
-      </div>
-
-      <h3 style={{ margin: '14px 0 8px' }}>{t('d_leader')}</h3>
-      <div className="card">
-        {lb.length === 0 && <div className="muted">{t('d_leaderEmpty')}</div>}
-        {lb.map((row, i) => {
-          const me = row.nickname === player?.nickname;
-          return (
-            <div key={i} className={`leaderboard-row ${me ? 'leaderboard-row--me' : ''}`}>
-              <div>
-                <strong>#{i + 1}</strong> {row.nickname}
-                {row.company ? <span className="muted"> · {row.company}</span> : null}
-              </div>
-              <div>{row.score} <span className="muted">{t('points')}</span></div>
-            </div>
-          );
-        })}
       </div>
 
       <div style={{ marginTop: 12 }}>

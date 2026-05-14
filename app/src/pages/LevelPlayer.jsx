@@ -47,7 +47,7 @@ export default function LevelPlayer() {
       const final = updated.reduce((a, s) => a + s.score, 0);
       const stars = starsFor(final / totalMax);
       const euro = euroFromScore(final, stars);
-      completeLevel({ levelId: level.id, score: final, stars, euroGained: euro });
+      completeLevel({ levelId: level.id, score: final, stars, euroGained: euro, timeSec: 0 });
       setDone(true);
     } else {
       setSceneIdx(i => i + 1);
