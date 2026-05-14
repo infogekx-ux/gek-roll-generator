@@ -7,6 +7,7 @@ import Lightning from '../components/Lightning.jsx';
 import OmeJanPopup from '../components/OmeJanPopup.jsx';
 import { sfx } from '../utils/audio.js';
 import { pickInspecteurQuote } from '../data/inspecteurQuotes.js';
+import EasterEgg from '../components/EasterEgg.jsx';
 
 // Phases: 'income' (drag income items to boxes) → 'aftrek' (drag deductions) → 'submit'
 export default function AangifteScene({ scene, player, onComplete, onAbort }) {
@@ -100,6 +101,17 @@ export default function AangifteScene({ scene, player, onComplete, onAbort }) {
       <OmeJanPopup active={!explainOverlay} minSec={16} maxSec={28} />
 
       <div className="scene-intro">{t('ag_intro')}</div>
+
+      <EasterEgg
+        eggId="koffiezetapparaat"
+        style={{ position: 'absolute', top: 60, right: 10, zIndex: 6 }}
+        onCaught={() => { setRage(r => Math.min(5, r + 1)); setLightningKey(k => k + 1); }}
+      />
+      <EasterEgg
+        eggId="prullenbak"
+        style={{ position: 'absolute', top: 60, left: 10, zIndex: 6 }}
+        onCaught={() => { setRage(r => Math.min(5, r + 1)); setLightningKey(k => k + 1); }}
+      />
 
       {phase === 'income' && (
         <>

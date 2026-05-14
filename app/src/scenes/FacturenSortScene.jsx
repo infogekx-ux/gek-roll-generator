@@ -7,6 +7,7 @@ import Lightning from '../components/Lightning.jsx';
 import OmeJanPopup from '../components/OmeJanPopup.jsx';
 import { sfx } from '../utils/audio.js';
 import { pickInspecteurQuote } from '../data/inspecteurQuotes.js';
+import EasterEgg from '../components/EasterEgg.jsx';
 
 // Drag invoices to the right BTW bucket. Timer ticks. Mobile-first.
 export default function FacturenSortScene({ scene, player, onComplete, onAbort }) {
@@ -113,6 +114,12 @@ export default function FacturenSortScene({ scene, player, onComplete, onAbort }
       <div className="scene-intro" style={{ marginBottom: 6 }}>
         {t('fs_intro')}
       </div>
+
+      <EasterEgg
+        eggId="prullenbak"
+        style={{ position: 'absolute', bottom: 16, right: 10, zIndex: 6 }}
+        onCaught={() => { setRage(r => Math.min(5, r + 1)); setLightningKey(k => k + 1); }}
+      />
       {inspecteurLine && (
         <div className="bubble bubble--inspecteur" style={{ marginBottom: 8 }}>
           {inspecteurLine}

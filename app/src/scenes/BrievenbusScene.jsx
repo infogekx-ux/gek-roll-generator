@@ -6,6 +6,7 @@ import Lightning from '../components/Lightning.jsx';
 import OmeJanPopup from '../components/OmeJanPopup.jsx';
 import { sfx } from '../utils/audio.js';
 import { pickInspecteurQuote } from '../data/inspecteurQuotes.js';
+import EasterEgg from '../components/EasterEgg.jsx';
 
 // Phases: 'mailbox' | 'envelope' | 'letter' | 'consequence'
 export default function BrievenbusScene({ scene, player, onComplete, onAbort }) {
@@ -62,6 +63,18 @@ export default function BrievenbusScene({ scene, player, onComplete, onAbort }) 
       {phase === 'mailbox' && (
         <>
           <div className="scene-intro">{t('bv_intro')}</div>
+
+          <EasterEgg
+            eggId="telefoon"
+            style={{ position: 'absolute', top: 70, right: 10, zIndex: 6 }}
+            onCaught={() => { setRage(r => Math.min(5, r + 2)); setLightningKey(k => k + 1); }}
+          />
+          <EasterEgg
+            eggId="biertje"
+            style={{ position: 'absolute', top: 70, left: 10, zIndex: 6 }}
+            onCaught={() => { setRage(r => Math.min(5, r + 1)); setLightningKey(k => k + 1); }}
+          />
+
           <div className="mailbox-scene">
             <div className="mailbox-house">🏠</div>
             <button className="mailbox-btn" onClick={openMailbox}>

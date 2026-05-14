@@ -113,6 +113,24 @@ export function GameProvider({ children }) {
     }
   }
 
+  function unlockAchievement(achId) {
+    setState(s => {
+      const have = s.achievements || {};
+      if (have[achId]) return s;  // already unlocked, no-op
+      return {
+        ...s,
+        achievements: {
+          ...have,
+          [achId]: { unlockedAt: new Date().toISOString() },
+        },
+      };
+    });
+  }
+
+  function hasAchievement(achId) {
+    return !!(state.achievements && state.achievements[achId]);
+  }
+
   // Memoized translator
   const t = useCallback(key => tRaw(key, lang), [lang]);
 
@@ -130,6 +148,8 @@ export function GameProvider({ children }) {
     lang,
     changeLanguage,
     t,
+    unlockAchievement,
+    hasAchievement,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

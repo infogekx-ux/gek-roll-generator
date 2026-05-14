@@ -2,6 +2,7 @@ import React from 'react';
 import { useGame } from '../context/GameContext.jsx';
 import { getLevelNew, LEVELS_NEW } from '../data/scenes.js';
 import { LANGUAGES } from '../data/i18n.js';
+import { EASTER_EGGS, eggsList } from '../data/easterEggs.js';
 import DisclaimerBar from '../components/DisclaimerBar.jsx';
 import { sfx } from '../utils/audio.js';
 
@@ -88,6 +89,30 @@ export default function Dashboard() {
         </div>
         <div className="muted" style={{ color: '#FFC107' }}>
           {t('d_weeklySpon')}
+        </div>
+      </div>
+
+      <h3 style={{ margin: '14px 0 8px' }}>
+        🏆 {lang === 'PL' ? 'Odznaki' : lang === 'EN' ? 'Achievements' : 'Achievements'}
+        {' '}
+        <span className="muted">({Object.keys(state.achievements || {}).length} / {eggsList().length})</span>
+      </h3>
+      <div className="card">
+        <div className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
+          {lang === 'PL' && 'Stukaj w ukryte obiekty w scenach. 30–50% szansy na wpadkę.'}
+          {lang === 'EN' && 'Tap hidden objects in scenes. 30–50% chance of getting caught.'}
+          {lang === 'NL' && 'Tik op verborgen objecten in scenes. 30–50% kans op betrapping.'}
+        </div>
+        <div className="achievements-row">
+          {eggsList().map(egg => {
+            const have = !!(state.achievements && state.achievements[egg.id]);
+            return (
+              <span key={egg.id} className={`ach-pill ${have ? '' : 'ach-pill--locked'}`}>
+                {have ? egg.emoji : '🔒'}{' '}
+                {have ? (egg.title[lang] || egg.title.NL) : '???'}
+              </span>
+            );
+          })}
         </div>
       </div>
 

@@ -7,6 +7,7 @@ import OmeJanPopup from '../components/OmeJanPopup.jsx';
 import Inspecteur from '../components/Inspecteur.jsx';
 import { sfx } from '../utils/audio.js';
 import { pickInspecteurQuote } from '../data/inspecteurQuotes.js';
+import EasterEgg from '../components/EasterEgg.jsx';
 
 // Bouwmarkt scene: tap items to add to cart, then KASSA → boss confrontation.
 // Phases: 'shopping' | 'kassa' | 'boss' | 'done'
@@ -128,6 +129,19 @@ export default function BouwmarktScene({ scene, player, onComplete, onAbort }) {
       {phase === 'shopping' && (
         <>
           <div className="scene-intro">{t('bm_intro')}</div>
+
+          {/* Easter eggs verstopt in de winkel */}
+          <EasterEgg
+            eggId="lichtschakelaar"
+            style={{ position: 'absolute', top: 60, right: 10, zIndex: 6 }}
+            onCaught={() => { setRage(r => Math.min(5, r + 2)); setLightningKey(k => k + 1); }}
+          />
+          <EasterEgg
+            eggId="koffiezetapparaat"
+            style={{ position: 'absolute', top: 60, left: 10, zIndex: 6 }}
+            onCaught={() => { setRage(r => Math.min(5, r + 2)); setLightningKey(k => k + 1); }}
+          />
+
           <div className="shop-shelves">
             {scene.items.map(it => {
               const inCart = !!cart[it.id];
