@@ -19,10 +19,7 @@ export default function Leaderboard() {
   const [natFilter, setNatFilter] = useState(profile?.nationality || 'NL');
 
   async function load() {
-    if (!online) {
-      setRows([]);
-      return;
-    }
+    if (!online) { setRows([]); return; }
     setLoading(true);
     try {
       let data = [];

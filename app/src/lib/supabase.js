@@ -1,119 +1,70 @@
+// LULBAL — own dedicated Supabase project. Auth via magic link.
 import { createClient } from '@supabase/supabase-js';
 
 const URL = import.meta.env.VITE_SUPABASE_URL;
 const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!URL || !KEY) {
-  console.warn('[LULBAL] Supabase env vars ontbreken — game draait in offline-modus.');
-}
+if (!URL || !KEY) console.warn('[LULBAL] Supabase env missing — offline mode');
 
-export const supabase = URL && KEY
+export const ONLINE = !!(URL && KEY);
+
+export const supabase = ONLINE
   ? createClient(URL, KEY, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
+        flowType: 'implicit',
         storage: window.localStorage,
         storageKey: 'lulbal.auth.v1',
       },
     })
   : null;
 
-export const ONLINE = !!supabase;
-
-// Pending onboarding data — store nick/company/nationality/lang between
-// "click SPELEN → magic link sent" and "user clicks link → comes back".
+// --- Pending signup buffer (between SPELEN click and magic-link return) ---
 const PENDING_KEY = 'lulbal.pending_signup.v1';
-
-export function savePendingSignup(data) {
-  try { localStorage.setItem(PENDING_KEY, JSON.stringify(data)); } catch {}
+export function savePendingSignup(d) {
+  try { localStorage.setItem(PENDING_KEY, JSON.stringify(d)); } catch {}
 }
 export function loadPendingSignup() {
-  try { return JSON.parse(localStorage.getItem(PENDING_KEY) || 'null'); }
-  catch { return null; }
+  try { return JSON.parse(localStorage.getItem(PENDING_KEY) || 'null'); } catch { return null; }
 }
 export function clearPendingSignup() {
   try { localStorage.removeItem(PENDING_KEY); } catch {}
 }
 
-// Auth — 6-digit OTP code flow ----------------------------------------
-// We deliberately do NOT pass emailRedirectTo, so Supabase's magic-link
-// (which respects the project's shared Site URL) is unused. The email
-// still arrives — user reads the code from it, types it back here,
-// we verify and create a session — no redirect, no cross-app surprise.
-export async function sendEmailOtp(email) {
-  if (!supabase) return { ok: false, error: { message: 'offline' } };
-  const { error } = await supabase.auth.signInWithOtp({
-    email: email.trim().toLowerCase(),
-    options: { shouldCreateUser: true },
-  });
-  if (error) return { ok: false, error };
-  return { ok: true };
-}
-
-export async function verifyEmailOtp(email, token) {
-  if (!supabase) return { ok: false, error: { message: 'offline' } };
-  const cleaned = (token || '').replace(/\s+/g, '').slice(0, 6);
-  const { data, error } = await supabase.auth.verifyOtp({
-    email: email.trim().toLowerCase(),
-    token: cleaned,
-    type: 'email',
-  });
-  if (error) return { ok: false, error };
-  return { ok: true, session: data?.session, user: data?.user };
-}
-
-// Profile API ------------------------------------------------------------
+// --- Profile API ---
 export async function fetchMyProfile() {
   if (!supabase) return null;
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return null;
   const { data, error } = await supabase
-    .from('lulbal_users')
-    .select('*')
-    .eq('id', session.user.id)
-    .maybeSingle();
-  if (error) {
-    console.warn('[LULBAL] fetchMyProfile error', error);
-    return null;
-  }
+    .from('lulbal_users').select('*').eq('id', session.user.id).maybeSingle();
+  if (error) { console.warn('[LULBAL] fetchMyProfile', error); return null; }
   return data;
 }
 
-export async function ensureProfile({ email, nickname, company_name, nationality, ui_lang }) {
+export async function ensureProfile(payload) {
   if (!supabase) return null;
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return null;
-
-  const id = session.user.id;
-  // Try fetch first
   const existing = await fetchMyProfile();
   if (existing) return existing;
 
-  // Insert
-  const payload = {
-    id,
-    email: email || session.user.email,
-    nickname: (nickname || `player_${id.slice(0, 8)}`).trim(),
-    company_name: company_name?.trim() || null,
-    nationality: nationality || 'NL',
-    ui_lang: ui_lang || 'NL',
+  const insert = {
+    id: session.user.id,
+    email: payload.email || session.user.email,
+    nickname: (payload.nickname || `player_${session.user.id.slice(0,8)}`).trim(),
+    company_name: payload.company_name?.trim() || null,
+    nationality: payload.nationality || 'NL',
+    ui_lang: payload.ui_lang || 'NL',
   };
-  const { data, error } = await supabase
-    .from('lulbal_users')
-    .insert(payload)
-    .select('*')
-    .single();
-  if (error) {
-    // Could be a duplicate nickname — try appending random suffix
-    if (error.code === '23505' && error.message?.includes('nickname')) {
-      payload.nickname = `${payload.nickname}_${Math.floor(Math.random() * 1000)}`;
-      const retry = await supabase.from('lulbal_users').insert(payload).select('*').single();
-      if (!retry.error) return retry.data;
-    }
-    console.warn('[LULBAL] ensureProfile insert error', error);
-    return null;
+  let { data, error } = await supabase.from('lulbal_users').insert(insert).select('*').single();
+  if (error?.code === '23505' && error.message?.includes('nickname')) {
+    insert.nickname = `${insert.nickname}_${Math.floor(Math.random()*9999)}`;
+    ({ data, error } = await supabase.from('lulbal_users').insert(insert).select('*').single());
   }
+  if (error) { console.warn('[LULBAL] ensureProfile', error); return null; }
   return data;
 }
 
@@ -121,196 +72,109 @@ export async function updateProfile(patch) {
   if (!supabase) return null;
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return null;
-  const { data, error } = await supabase
-    .from('lulbal_users')
-    .update({ ...patch, updated_at: new Date().toISOString() })
-    .eq('id', session.user.id)
-    .select('*')
-    .single();
-  if (error) {
-    console.warn('[LULBAL] updateProfile error', error);
-    return null;
-  }
+  const { data } = await supabase
+    .from('lulbal_users').update({ ...patch, updated_at: new Date().toISOString() })
+    .eq('id', session.user.id).select('*').single();
   return data;
 }
 
-// Scores --------------------------------------------------------------
+// --- Scores ---
 export async function insertScore({ level, score, stars, time_seconds }) {
   if (!supabase) return null;
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return null;
-  const payload = {
-    user_id: session.user.id,
-    level,
-    score,
-    stars,
-    time_seconds: time_seconds || 0,
-  };
-  const { data, error } = await supabase
-    .from('lulbal_scores')
-    .insert(payload)
-    .select('*')
-    .single();
-  if (error) console.warn('[LULBAL] insertScore error', error);
+  const { data, error } = await supabase.from('lulbal_scores').insert({
+    user_id: session.user.id, level, score, stars, time_seconds: time_seconds || 0,
+  }).select('*').single();
+  if (error) console.warn('[LULBAL] insertScore', error);
   return data;
 }
 
-// Progress upsert ----------------------------------------------------
 export async function upsertProgress({ level, score, stars }) {
   if (!supabase) return null;
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return null;
-  // Fetch existing first to compute best
-  const { data: existing } = await supabase
-    .from('lulbal_progress')
-    .select('*')
-    .eq('user_id', session.user.id)
-    .eq('level', level)
-    .maybeSingle();
-
-  const newBestScore = Math.max(existing?.best_score || 0, score);
-  const newBestStars = Math.max(existing?.best_stars || 0, stars);
-
-  const { data, error } = await supabase
-    .from('lulbal_progress')
-    .upsert({
-      user_id: session.user.id,
-      level,
-      completed: true,
-      best_score: newBestScore,
-      best_stars: newBestStars,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,level' })
-    .select('*')
-    .single();
-  if (error) console.warn('[LULBAL] upsertProgress error', error);
+  const { data: prev } = await supabase
+    .from('lulbal_progress').select('*')
+    .eq('user_id', session.user.id).eq('level', level).maybeSingle();
+  const best_score = Math.max(prev?.best_score || 0, score);
+  const best_stars = Math.max(prev?.best_stars || 0, stars);
+  const { data } = await supabase.from('lulbal_progress').upsert({
+    user_id: session.user.id, level, completed: true, best_score, best_stars,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,level' }).select('*').single();
   return data;
-}
-
-// Achievements --------------------------------------------------------
-export async function unlockAchievementOnline(achievement_key) {
-  if (!supabase) return null;
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return null;
-  const { error } = await supabase
-    .from('lulbal_achievements')
-    .insert({
-      user_id: session.user.id,
-      achievement_key,
-    });
-  // ignore unique-violation (already unlocked)
-  if (error && error.code !== '23505') {
-    console.warn('[LULBAL] unlockAchievementOnline error', error);
-  }
-}
-
-export async function fetchMyAchievements() {
-  if (!supabase) return [];
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return [];
-  const { data, error } = await supabase
-    .from('lulbal_achievements')
-    .select('achievement_key, unlocked_at')
-    .eq('user_id', session.user.id);
-  if (error) {
-    console.warn('[LULBAL] fetchMyAchievements error', error);
-    return [];
-  }
-  return data || [];
-}
-
-// Leaderboards --------------------------------------------------------
-export async function fetchGlobalLeaderboard(limit = 100) {
-  if (!supabase) return [];
-  const { data, error } = await supabase
-    .from('lulbal_users_public')
-    .select('*')
-    .order('total_score', { ascending: false })
-    .limit(limit);
-  if (error) {
-    console.warn('[LULBAL] fetchGlobalLeaderboard error', error);
-    return [];
-  }
-  return data || [];
-}
-
-export async function fetchLeaderboardByNationality(nationality, limit = 50) {
-  if (!supabase) return [];
-  const { data, error } = await supabase
-    .from('lulbal_users_public')
-    .select('*')
-    .eq('nationality', nationality)
-    .order('total_score', { ascending: false })
-    .limit(limit);
-  if (error) {
-    console.warn('[LULBAL] fetchLeaderboardByNationality error', error);
-    return [];
-  }
-  return data || [];
-}
-
-export async function fetchWeeklyLeaderboard(limit = 50) {
-  if (!supabase) return [];
-  // Current ISO year + week
-  const now = new Date();
-  const isoYear = now.getUTCFullYear();
-  const isoWeek = getISOWeek(now);
-
-  const { data, error } = await supabase
-    .from('lulbal_leaderboard_weekly')
-    .select(`
-      total_score,
-      week_number,
-      year,
-      user:lulbal_users_public!user_id (
-        id, nickname, company_name, nationality, current_title
-      )
-    `)
-    .eq('year', isoYear)
-    .eq('week_number', isoWeek)
-    .order('total_score', { ascending: false })
-    .limit(limit);
-  if (error) {
-    console.warn('[LULBAL] fetchWeeklyLeaderboard error', error);
-    return [];
-  }
-  return data || [];
-}
-
-// Count of players with weekly leaderboard rows in current ISO week+year.
-export async function fetchWeeklyActiveCount() {
-  if (!supabase) return null;
-  const now = new Date();
-  const isoYear = now.getUTCFullYear();
-  const isoWeek = getISOWeek(now);
-  const { count, error } = await supabase
-    .from('lulbal_leaderboard_weekly')
-    .select('user_id', { count: 'exact', head: true })
-    .eq('year', isoYear)
-    .eq('week_number', isoWeek);
-  if (error) {
-    console.warn('[LULBAL] fetchWeeklyActiveCount error', error);
-    return null;
-  }
-  return count;
 }
 
 export async function fetchMyProgress() {
   if (!supabase) return [];
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return [];
-  const { data, error } = await supabase
-    .from('lulbal_progress')
-    .select('*')
-    .eq('user_id', session.user.id);
-  if (error) {
-    console.warn('[LULBAL] fetchMyProgress error', error);
-    return [];
-  }
+  const { data } = await supabase.from('lulbal_progress').select('*').eq('user_id', session.user.id);
   return data || [];
 }
 
-// Helper -------------------------------------------------------------
+// --- Achievements ---
+export async function unlockAchievementOnline(achievement_key) {
+  if (!supabase) return;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return;
+  const { error } = await supabase.from('lulbal_achievements').insert({
+    user_id: session.user.id, achievement_key,
+  });
+  if (error && error.code !== '23505') console.warn('[LULBAL] unlockAchievement', error);
+}
+
+export async function fetchMyAchievements() {
+  if (!supabase) return [];
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return [];
+  const { data } = await supabase
+    .from('lulbal_achievements').select('achievement_key,unlocked_at')
+    .eq('user_id', session.user.id);
+  return data || [];
+}
+
+// --- Public leaderboards ---
+export async function fetchGlobalLeaderboard(limit = 100) {
+  if (!supabase) return [];
+  const { data } = await supabase.from('lulbal_users_public').select('*')
+    .order('total_score', { ascending: false }).limit(limit);
+  return data || [];
+}
+
+export async function fetchLeaderboardByNationality(nationality, limit = 50) {
+  if (!supabase) return [];
+  const { data } = await supabase.from('lulbal_users_public').select('*')
+    .eq('nationality', nationality)
+    .order('total_score', { ascending: false }).limit(limit);
+  return data || [];
+}
+
+export async function fetchWeeklyLeaderboard(limit = 50) {
+  if (!supabase) return [];
+  const now = new Date();
+  const isoYear = now.getUTCFullYear();
+  const isoWeek = getISOWeek(now);
+  const { data } = await supabase
+    .from('lulbal_leaderboard_weekly')
+    .select(`total_score, week_number, year, user:lulbal_users_public!user_id ( id, nickname, company_name, nationality, current_title )`)
+    .eq('year', isoYear).eq('week_number', isoWeek)
+    .order('total_score', { ascending: false }).limit(limit);
+  return data || [];
+}
+
+export async function fetchWeeklyActiveCount() {
+  if (!supabase) return null;
+  const now = new Date();
+  const isoYear = now.getUTCFullYear();
+  const isoWeek = getISOWeek(now);
+  const { count } = await supabase
+    .from('lulbal_leaderboard_weekly').select('user_id', { count: 'exact', head: true })
+    .eq('year', isoYear).eq('week_number', isoWeek);
+  return count;
+}
+
 function getISOWeek(date) {
   const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
   const day = d.getUTCDay() || 7;

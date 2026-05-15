@@ -493,6 +493,16 @@ input, select { font-family: inherit; font-size: 16px; }
   text-shadow: 4px 4px 0 #000; letter-spacing: 4px;
 }
 
+/* Inspector tikt op horloge tijdens magic-link wait */
+.inspecteur-tapping {
+  animation: tap-foot 0.45s ease-in-out infinite alternate;
+  transform-origin: bottom center;
+}
+@keyframes tap-foot {
+  from { transform: rotate(-1.5deg) translateY(0); }
+  to   { transform: rotate(1.5deg) translateY(-2px); }
+}
+
 /* =================== STREAK BANNER =================== */
 .streak-banner {
   display: flex;

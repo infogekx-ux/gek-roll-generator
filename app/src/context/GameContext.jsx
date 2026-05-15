@@ -3,16 +3,14 @@ import { loadState, saveState, todayISO } from '../utils/storage.js';
 import { t as tRaw, uiLangFromNationality } from '../data/i18n.js';
 import {
   supabase, ONLINE,
-  fetchMyProfile, ensureProfile, updateProfile,
+  fetchMyProfile, ensureProfile,
   insertScore, upsertProgress, fetchMyProgress,
   unlockAchievementOnline, fetchMyAchievements,
   savePendingSignup, loadPendingSignup, clearPendingSignup,
-  sendEmailOtp, verifyEmailOtp,
 } from '../lib/supabase.js';
 
 const GameContext = createContext(null);
 
-// Title thresholds (mirror of SQL function) ---------------------------
 function titleForScore(s) {
   if (s >= 40000) return 'Belasting Boss';
   if (s >= 25000) return 'LULBAL Legende';
@@ -27,31 +25,27 @@ function titleForScore(s) {
 }
 
 export function GameProvider({ children }) {
-  // Local-state shadow (offline fallback + cache).
   const [state, setState] = useState(() => loadState());
   const [screen, setScreen] = useState('boot');
   const [currentLevelId, setCurrentLevelId] = useState(1);
   const [lang, setLang] = useState('NL');
 
-  // Online auth + profile
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [awaitingMagicLink, setAwaitingMagicLink] = useState(false);
 
-  // BOOT — subscribe auth changes, restore session, hydrate profile.
+  // Path-based routing for the magic-link callback
+  const isAuthCallback = typeof window !== 'undefined' && window.location.pathname.startsWith('/auth/callback');
+
   useEffect(() => {
     let mounted = true;
 
     async function boot() {
       if (!ONLINE) {
-        // Offline-only flow — same as before.
         if (state.player) {
-          const storedLang = state.player.uiLang || uiLangFromNationality(state.player.nationality || 'NL');
-          setLang(storedLang);
+          setLang(state.player.uiLang || uiLangFromNationality(state.player.nationality || 'NL'));
           setScreen('dashboard');
-        } else {
-          setScreen('onboarding');
-        }
+        } else setScreen('onboarding');
         return;
       }
 
@@ -60,38 +54,29 @@ export function GameProvider({ children }) {
       setSession(s);
       await hydrateForSession(s);
     }
-
     boot();
 
     if (!ONLINE) return;
-
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange(async (_evt, s) => {
       if (!mounted) return;
       setSession(s);
       await hydrateForSession(s);
     });
-
     return () => { mounted = false; sub?.subscription?.unsubscribe?.(); };
   }, []); // eslint-disable-line
 
   async function hydrateForSession(s) {
     if (!s) {
-      // Not logged in.
       if (state.player) {
-        // Has local data — show dashboard offline
         setLang(state.player.uiLang || uiLangFromNationality(state.player.nationality || 'NL'));
         setScreen('dashboard');
-      } else {
-        setScreen('onboarding');
-      }
+      } else setScreen('onboarding');
       return;
     }
 
-    // Logged in. Hydrate / create profile.
     const pending = loadPendingSignup();
     let prof = await fetchMyProfile();
     if (!prof) {
-      // First login: create from pending or fallback to session email
       prof = await ensureProfile({
         email: s.user.email,
         nickname: pending?.nickname,
@@ -105,7 +90,6 @@ export function GameProvider({ children }) {
 
     if (prof) {
       setLang(prof.ui_lang || 'NL');
-      // Sync local cache so dashboard works offline next time too
       setState(s2 => ({
         ...s2,
         player: {
@@ -117,20 +101,11 @@ export function GameProvider({ children }) {
           createdAt: prof.created_at,
         },
       }));
-
-      // Fetch progress + achievements
-      const [progress, achievements] = await Promise.all([
-        fetchMyProgress(),
-        fetchMyAchievements(),
-      ]);
+      const [progress, achievements] = await Promise.all([fetchMyProgress(), fetchMyAchievements()]);
       const levels = {};
-      for (const p of progress) {
-        levels[p.level] = { stars: p.best_stars, bestScore: p.best_score, attempts: 0 };
-      }
+      for (const p of progress) levels[p.level] = { stars: p.best_stars, bestScore: p.best_score, attempts: 0 };
       const achMap = {};
-      for (const a of achievements) {
-        achMap[a.achievement_key] = { unlockedAt: a.unlocked_at };
-      }
+      for (const a of achievements) achMap[a.achievement_key] = { unlockedAt: a.unlocked_at };
       setState(s2 => ({
         ...s2,
         levels,
@@ -140,47 +115,23 @@ export function GameProvider({ children }) {
         achievements: achMap,
       }));
 
+      // After successful auth, navigate from /auth/callback → /
+      if (isAuthCallback && typeof window !== 'undefined') {
+        try { window.history.replaceState({}, '', '/'); } catch {}
+      }
       setScreen('dashboard');
-
-      // Migration: if local has scores that aren't in server yet, push them.
-      maybeMigrateLocalScores(prof);
     } else {
-      // Failed to create profile — fall back to onboarding-ish.
       setScreen('onboarding');
     }
   }
 
-  // Persist local cache
   useEffect(() => { saveState(state); }, [state]);
 
-  // ---- Migration: push local-only history into Supabase on first login ----
-  async function maybeMigrateLocalScores(prof) {
-    if (!ONLINE) return;
-    const flagKey = `lulbal.migrated.${prof.id}`;
-    if (localStorage.getItem(flagKey)) return;
-    const lb = state.leaderboard || [];
-    const localScores = lb.filter(r => r.nickname === prof.nickname && r.score > 0);
-    for (const row of localScores) {
-      try {
-        await insertScore({
-          level: row.levelId || 1,
-          score: row.score,
-          stars: row.stars || 0,
-          time_seconds: 0,
-        });
-      } catch (e) { /* ignore */ }
-    }
-    localStorage.setItem(flagKey, '1');
-  }
-
-  // ---- Onboarding: send 6-digit OTP code to email ----
-  // No redirect involved — user reads code from email and types it here.
-  // Works on any device (even if email is on a different one).
   async function startMagicLink({ email, nickname, company, nationality, uiLang }) {
+    const language = uiLang || uiLangFromNationality(nationality || 'NL');
+    setLang(language);
+
     if (!ONLINE) {
-      // Offline fallback — local-only signup, instant level start.
-      const language = uiLang || uiLangFromNationality(nationality || 'NL');
-      setLang(language);
       setState(s => ({
         ...s,
         player: {
@@ -204,74 +155,44 @@ export function GameProvider({ children }) {
       nickname: nickname.trim(),
       company: (company || '').trim(),
       nationality: nationality || 'NL',
-      uiLang: uiLang || uiLangFromNationality(nationality || 'NL'),
+      uiLang: language,
     });
 
-    const result = await sendEmailOtp(email);
-    if (!result.ok) {
-      console.warn('[LULBAL] sendEmailOtp error', result.error);
-      return result;
-    }
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim().toLowerCase(),
+      options: {
+        emailRedirectTo: 'https://lulbal.netlify.app/auth/callback',
+        shouldCreateUser: true,
+      },
+    });
+    if (error) return { ok: false, error };
     setAwaitingMagicLink(true);
-    return { ok: true };
-  }
-
-  // ---- Verify OTP code typed by the user ----
-  async function verifyOtpCode(token) {
-    if (!ONLINE) return { ok: false, error: { message: 'offline' } };
-    const pending = loadPendingSignup();
-    if (!pending?.email) return { ok: false, error: { message: 'no_pending_email' } };
-    const result = await verifyEmailOtp(pending.email, token);
-    if (!result.ok) return result;
-    // onAuthStateChange will fire and trigger hydrateForSession,
-    // which reads pending data (nick/company/nat/uiLang) and creates profile.
-    setAwaitingMagicLink(false);
     return { ok: true };
   }
 
   function changeLanguage(newLang) {
     setLang(newLang);
     setState(s => s.player ? { ...s, player: { ...s.player, uiLang: newLang } } : s);
-    if (ONLINE && session) {
-      updateProfile({ ui_lang: newLang }).catch(() => {});
-    }
   }
 
-  function startLevel(levelId) {
-    setCurrentLevelId(levelId);
-    setScreen('level');
-  }
-
-  function backToDashboard() {
-    setScreen('dashboard');
-  }
+  function startLevel(levelId) { setCurrentLevelId(levelId); setScreen('level'); }
+  function backToDashboard() { setScreen('dashboard'); }
 
   async function completeLevel({ levelId, score, stars, euroGained, timeSec }) {
-    // Update local first (instant feedback)
     setState(s => {
       const prev = s.levels[levelId] || { stars: 0, bestScore: 0, attempts: 0 };
       const newStars = Math.max(prev.stars, stars);
       const newBest = Math.max(prev.bestScore, score);
       const starsDelta = newStars - prev.stars;
-
       const today = todayISO();
       let streak = s.streakDays;
       if (s.lastPlayedDate !== today) {
         const yest = new Date(Date.now() - 86400_000).toISOString().slice(0, 10);
-        if (s.lastPlayedDate === yest) streak = (streak || 0) + 1;
-        else streak = 1;
+        streak = (s.lastPlayedDate === yest) ? (streak || 0) + 1 : 1;
       }
-
       return {
         ...s,
-        levels: {
-          ...s.levels,
-          [levelId]: {
-            stars: newStars,
-            bestScore: newBest,
-            attempts: prev.attempts + 1,
-          },
-        },
+        levels: { ...s.levels, [levelId]: { stars: newStars, bestScore: newBest, attempts: prev.attempts + 1 } },
         starsTotal: (s.starsTotal || 0) + starsDelta,
         scoreTotal: (s.scoreTotal || 0) + score,
         euroSaved: (s.euroSaved || 0) + euroGained,
@@ -280,17 +201,13 @@ export function GameProvider({ children }) {
       };
     });
 
-    // Then push online if logged in
     if (ONLINE && session) {
       try {
         await insertScore({ level: levelId, score, stars, time_seconds: timeSec || 0 });
         await upsertProgress({ level: levelId, score, stars });
-        // Refresh profile to get new total_score + streak from triggers
-        const prof = await fetchMyProfile();
-        if (prof) setProfile(prof);
-      } catch (e) {
-        console.warn('[LULBAL] complete-level online sync failed', e);
-      }
+        const fresh = await fetchMyProfile();
+        if (fresh) setProfile(fresh);
+      } catch (e) { console.warn('[LULBAL] score sync failed', e); }
     }
   }
 
@@ -298,14 +215,9 @@ export function GameProvider({ children }) {
     setState(s => {
       const have = s.achievements || {};
       if (have[achId]) return s;
-      return {
-        ...s,
-        achievements: { ...have, [achId]: { unlockedAt: new Date().toISOString() } },
-      };
+      return { ...s, achievements: { ...have, [achId]: { unlockedAt: new Date().toISOString() } } };
     });
-    if (ONLINE && session) {
-      unlockAchievementOnline(achId).catch(() => {});
-    }
+    if (ONLINE && session) unlockAchievementOnline(achId).catch(() => {});
   }
 
   function hasAchievement(achId) {
@@ -313,9 +225,7 @@ export function GameProvider({ children }) {
   }
 
   async function signOut() {
-    if (ONLINE) {
-      await supabase.auth.signOut().catch(() => {});
-    }
+    if (ONLINE) { try { await supabase.auth.signOut(); } catch {} }
     localStorage.removeItem('lulbal.state.v1');
     setProfile(null);
     setSession(null);
@@ -328,14 +238,10 @@ export function GameProvider({ children }) {
   }
 
   function resetAll() {
-    if (confirm('Echt alles wissen? Inspecteur danst van vreugde.')) {
-      signOut();
-    }
+    if (confirm('Echt alles wissen? Inspecteur danst van vreugde.')) signOut();
   }
 
   const t = useCallback(key => tRaw(key, lang), [lang]);
-
-  // Derive total stars consistently from progress (Supabase truth) when available
   const totalScore = profile?.total_score ?? (state.scoreTotal || 0);
   const titleStr   = profile?.current_title || titleForScore(totalScore);
 
@@ -343,26 +249,16 @@ export function GameProvider({ children }) {
     online: ONLINE,
     session,
     profile,
-    awaitingMagicLink,
-    setAwaitingMagicLink,
-    state,
-    screen,
-    setScreen,
-    currentLevelId,
-    startLevel,
-    backToDashboard,
+    isAuthCallback,
+    awaitingMagicLink, setAwaitingMagicLink,
+    state, screen, setScreen,
+    currentLevelId, startLevel, backToDashboard,
     startMagicLink,
-    verifyOtpCode,
     completeLevel,
-    resetAll,
-    signOut,
-    title: { label: titleStr },
-    totalScore,
-    lang,
-    changeLanguage,
-    t,
-    unlockAchievement,
-    hasAchievement,
+    resetAll, signOut,
+    title: { label: titleStr }, totalScore,
+    lang, changeLanguage, t,
+    unlockAchievement, hasAchievement,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
