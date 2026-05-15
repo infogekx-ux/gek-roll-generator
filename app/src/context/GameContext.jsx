@@ -7,6 +7,7 @@ import {
   insertScore, upsertProgress, fetchMyProgress,
   unlockAchievementOnline, fetchMyAchievements,
   savePendingSignup, loadPendingSignup, clearPendingSignup,
+  sendEmailOtp, verifyEmailOtp,
 } from '../lib/supabase.js';
 
 const GameContext = createContext(null);
@@ -172,10 +173,12 @@ export function GameProvider({ children }) {
     localStorage.setItem(flagKey, '1');
   }
 
-  // ---- Onboarding: send magic link ----
+  // ---- Onboarding: send 6-digit OTP code to email ----
+  // No redirect involved — user reads code from email and types it here.
+  // Works on any device (even if email is on a different one).
   async function startMagicLink({ email, nickname, company, nationality, uiLang }) {
     if (!ONLINE) {
-      // Offline / local-only signup — keep old behaviour.
+      // Offline fallback — local-only signup, instant level start.
       const language = uiLang || uiLangFromNationality(nationality || 'NL');
       setLang(language);
       setState(s => ({
@@ -197,26 +200,32 @@ export function GameProvider({ children }) {
     }
 
     savePendingSignup({
+      email: email.trim().toLowerCase(),
       nickname: nickname.trim(),
       company: (company || '').trim(),
       nationality: nationality || 'NL',
       uiLang: uiLang || uiLangFromNationality(nationality || 'NL'),
     });
 
-    const redirect = window.location.origin + window.location.pathname;
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim().toLowerCase(),
-      options: {
-        emailRedirectTo: redirect,
-        shouldCreateUser: true,
-      },
-    });
-
-    if (error) {
-      console.warn('[LULBAL] magic link error', error);
-      return { ok: false, error };
+    const result = await sendEmailOtp(email);
+    if (!result.ok) {
+      console.warn('[LULBAL] sendEmailOtp error', result.error);
+      return result;
     }
     setAwaitingMagicLink(true);
+    return { ok: true };
+  }
+
+  // ---- Verify OTP code typed by the user ----
+  async function verifyOtpCode(token) {
+    if (!ONLINE) return { ok: false, error: { message: 'offline' } };
+    const pending = loadPendingSignup();
+    if (!pending?.email) return { ok: false, error: { message: 'no_pending_email' } };
+    const result = await verifyEmailOtp(pending.email, token);
+    if (!result.ok) return result;
+    // onAuthStateChange will fire and trigger hydrateForSession,
+    // which reads pending data (nick/company/nat/uiLang) and creates profile.
+    setAwaitingMagicLink(false);
     return { ok: true };
   }
 
@@ -343,6 +352,7 @@ export function GameProvider({ children }) {
     startLevel,
     backToDashboard,
     startMagicLink,
+    verifyOtpCode,
     completeLevel,
     resetAll,
     signOut,

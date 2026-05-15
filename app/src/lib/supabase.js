@@ -36,6 +36,33 @@ export function clearPendingSignup() {
   try { localStorage.removeItem(PENDING_KEY); } catch {}
 }
 
+// Auth — 6-digit OTP code flow ----------------------------------------
+// We deliberately do NOT pass emailRedirectTo, so Supabase's magic-link
+// (which respects the project's shared Site URL) is unused. The email
+// still arrives — user reads the code from it, types it back here,
+// we verify and create a session — no redirect, no cross-app surprise.
+export async function sendEmailOtp(email) {
+  if (!supabase) return { ok: false, error: { message: 'offline' } };
+  const { error } = await supabase.auth.signInWithOtp({
+    email: email.trim().toLowerCase(),
+    options: { shouldCreateUser: true },
+  });
+  if (error) return { ok: false, error };
+  return { ok: true };
+}
+
+export async function verifyEmailOtp(email, token) {
+  if (!supabase) return { ok: false, error: { message: 'offline' } };
+  const cleaned = (token || '').replace(/\s+/g, '').slice(0, 6);
+  const { data, error } = await supabase.auth.verifyOtp({
+    email: email.trim().toLowerCase(),
+    token: cleaned,
+    type: 'email',
+  });
+  if (error) return { ok: false, error };
+  return { ok: true, session: data?.session, user: data?.user };
+}
+
 // Profile API ------------------------------------------------------------
 export async function fetchMyProfile() {
   if (!supabase) return null;
