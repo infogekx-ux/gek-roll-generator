@@ -11,17 +11,23 @@ Maj 2026. Brutalnie szczera analiza. Bez pochlebstw.
 5. **[akcje_natychmiast.md](./akcje_natychmiast.md)** — 10 ruchów w tym tygodniu, bez pieniędzy
 6. **[zabij_te_rzeczy.md](./zabij_te_rzeczy.md)** — co przestać, co zamrozić, sacred cows
 7. **[dlaczego_dawid.md](./dlaczego_dawid.md)** — pitch deck w tekście, unfair advantage
+8. **[dodatek_research.md](./dodatek_research.md) ⚡** — research z sieci, **EU DPP 2027 jako game-changer dla twojego NFC heat-press**, ceny konkurencji, korekty TOP 5
 
-## TL;DR (przeczytaj jeśli masz tylko 2 minuty)
+## TL;DR — wersja po researchu (maj 2026)
 
-**Twoja idealna ścieżka to nie nowy biznes — to BRUTALNE skupienie na tym co już działa i przynosi pieniądze.**
+**Game changer znaleziony:** Od 2027/2028 KAŻDA tkanina sprzedawana w EU MUSI mieć NFC/QR z Digital Product Passport (ESPR regulacja). **Twój heat-press NFC wynalazek właśnie stał się wymogiem prawnym dla ~1000+ małych marek odzieżowych w NL/BE/DE.**
 
-- **TOP 1:** PrintFlow OS — DTF Roll Studio jako productized vertical SaaS dla 50+ drukarni DTF w NL/EU. Już działa, już płaci, skalowalne do €4-8k MRR w 12 miesięcy.
-- **TOP 2:** Smart NFC Workwear — twój wynalazek jako brand-niche pod nazwą NEXTAG (lub podobną), sprzedawany przez ZZP'ers w branży budowlanej/technicznej.
-- **KILL:** G|SITE, G|OPTIMA, G|CLIP jako osobne filary. Zostają jako wewnętrzne tools w toolboxie.
-- **GEK-X żyje** — ale jako parasol nad dwoma produktami, nie pięcioma filarami. To nie zabicie GEK-X, to wyostrzenie.
-- **Twój problem nie jest pomysł.** Twój problem to ROZPROSZENIE. Masz działający produkt z płacącym klientem i zamiast skalować go do 50 klientów — budujesz 8 innych rzeczy.
+**Nowa strategia 2-toropwa (2026-2027):**
 
-Manifestor 4/6 robi jedną rzecz dobrze, staje się autorytetem w niszy, sieć przyciąga klientów. Nie 5 rzeczy na raz.
+- **TOP 1 — PrintFlow OS:** DTF Roll Studio jako vertical SaaS dla drukarni DTF. €98/mnd (55% taniej niż DecoNetwork $239). Sprzedajesz **drukarniom**.
+- **TOP 2 — GEK-X DPP:** Heat-press NFC + product passport SaaS dla małych marek odzieżowych. €5-15 per tag + €49-149/mnd. Sprzedajesz **markom** (lub przez drukarnie jako kanał).
 
-**Read more →** [analiza_profilu.md](./analiza_profilu.md)
+**Pętla synergii:** Drukarnia kupuje PrintFlow OS → dosprzedaje DPP swoim klientom-markom → ty zbierasz revenue z obu stron.
+
+- **KILL:** G|SITE, G|OPTIMA, G|CLIP jako filary. Werkbon-app (saturated). MUGMAG/Vakay/God View jako zombie projects.
+- **GEK-X żyje** jako parasol nad PrintFlow + DPP. To nie zabicie, to **wyostrzenie pod kątem regulacji EU 2027**.
+
+**Cel lipiec 2027 (twoje 35):** €5-8k MRR z PrintFlow OS + €3-7k z DPP = **€10k+ MRR, schodzisz z budowy.**
+
+**Read first if you have 5 min →** [dodatek_research.md](./dodatek_research.md)
+**Read first if you have 20 min →** [analiza_profilu.md](./analiza_profilu.md)
