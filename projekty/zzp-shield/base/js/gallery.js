@@ -32,9 +32,7 @@ const Gallery = {
     });
   },
 
-  isOpen() {
-    return document.getElementById('lightbox')?.classList.contains('open');
-  },
+  isOpen() { return document.getElementById('lightbox')?.classList.contains('open'); },
 
   open(index) {
     this.currentIndex = index;
@@ -79,7 +77,4 @@ const Gallery = {
 };
 
 window.Gallery = Gallery;
-
-// Default gallery list - empty until photos are added to /assets/gallery/
-// To add photos: drop files into assets/gallery/ and add filenames here
 window.GALLERY_IMAGES = window.GALLERY_IMAGES || [];

@@ -1,0 +1,6 @@
+# Drop client assets here:
+# - logo.png        (header logo, transparent background)
+# - logo-white.png  (footer logo, optional)
+# - favicon.png
+# - about.jpg       (owner photo for About section)
+# - gallery/*.jpg   (project photos — register filenames in js/gallery.js post-build, or extend app.js to read from a manifest)

@@ -38,7 +38,6 @@ const UI_TRANSLATIONS = {
     footer_contact: "Contact",
     footer_legal: "Bedrijfsgegevens",
 
-    // Offerte / factuur
     offerte_title: "Offerte",
     offerte_date: "Datum",
     offerte_valid: "Geldig tot",
@@ -59,7 +58,6 @@ const UI_TRANSLATIONS = {
     factuur_iban: "IBAN",
     factuur_due: "Vervaldatum",
 
-    // Units
     unit_hour: "uur",
     unit_hourly: "uur",
     unit_m2: "m²",
@@ -69,7 +67,6 @@ const UI_TRANSLATIONS = {
     unit_bucket: "emmer",
     unit_box: "doos",
 
-    // Panel
     panel_login_title: "Inloggen",
     panel_login_pin: "PIN code",
     panel_login_btn: "Inloggen",
@@ -98,18 +95,46 @@ const UI_TRANSLATIONS = {
     builder_preview: "Voorbeeld",
     builder_save: "Opslaan",
     builder_save_send: "Opslaan & versturen",
-    builder_to_invoice: "Maak factuur",
+    builder_split: "Splits in 2 facturen",
     builder_back: "Terug",
     builder_delete: "Verwijderen",
     builder_confirm_delete: "Weet je zeker dat je dit wilt verwijderen?",
+    builder_split_preview: "Bij splitsen: voorschot (alle materiaal + 20% arbeid) en restant (80% arbeid).",
+    builder_split_done: "2 facturen aangemaakt: voorschot en restant.",
+    builder_dupochron_link: "Link voor klant (acceptatie)",
+    builder_copy_link: "Kopieer link",
+    builder_link_copied: "Link gekopieerd!",
 
     status_concept: "Concept",
     status_sent: "Verstuurd",
     status_accepted: "Geaccepteerd",
     status_rejected: "Afgewezen",
+    status_discuss: "Overleg",
     status_open: "Open",
+    status_voorschot: "Voorschot",
     status_paid: "Betaald",
     status_overdue: "Te laat",
+
+    phase_voorschot: "Voorschot",
+    phase_restant: "Restant",
+
+    // Dupochron
+    dupochron_heading: "Voorwaarden & acceptatie",
+    dupochron_subtitle: "Lees de offerte en de voorwaarden zorgvuldig door voordat u uw keuze maakt.",
+    dupochron_checkbox: "Ik heb de offerte en de algemene voorwaarden gelezen en begrepen.",
+    dupochron_accept: "Akkoord",
+    dupochron_discuss: "Overleggen",
+    dupochron_reject: "Niet akkoord",
+    dupochron_accept_title: "Bedankt voor uw akkoord!",
+    dupochron_accept_msg: "Uw offerte is geaccepteerd. De voorschotfactuur (materiaalkosten + 20% arbeid) wordt zo spoedig mogelijk naar u verzonden. Na ontvangst van het voorschot starten wij met de werkzaamheden.",
+    dupochron_discuss_title: "Bedankt voor uw bericht",
+    dupochron_discuss_msg: "We hebben uw verzoek tot overleg ontvangen en nemen zo snel mogelijk contact met u op.",
+    dupochron_discuss_prompt: "Wat wilt u graag bespreken?",
+    dupochron_reject_title: "Bedankt voor uw tijd",
+    dupochron_reject_msg: "Jammer dat we deze keer geen overeenstemming hebben kunnen bereiken. We waarderen uw terugkoppeling.",
+    dupochron_reject_prompt: "Kunt u kort aangeven waarom u afziet?",
+    dupochron_send_note: "Verstuur",
+    dupochron_already_decided: "U heeft deze offerte al beoordeeld.",
   },
 
   pl: {
@@ -205,18 +230,45 @@ const UI_TRANSLATIONS = {
     builder_preview: "Podgląd",
     builder_save: "Zapisz",
     builder_save_send: "Zapisz i wyślij",
-    builder_to_invoice: "Utwórz fakturę",
+    builder_split: "Podziel na 2 faktury",
     builder_back: "Powrót",
     builder_delete: "Usuń",
     builder_confirm_delete: "Czy na pewno chcesz to usunąć?",
+    builder_split_preview: "Po podziale: przedpłata (cały materiał + 20% robocizny) i końcowa (80% robocizny).",
+    builder_split_done: "Utworzono 2 faktury: przedpłatę i fakturę końcową.",
+    builder_dupochron_link: "Link dla klienta (akceptacja)",
+    builder_copy_link: "Kopiuj link",
+    builder_link_copied: "Link skopiowany!",
 
     status_concept: "Szkic",
     status_sent: "Wysłana",
     status_accepted: "Zaakceptowana",
     status_rejected: "Odrzucona",
+    status_discuss: "Do uzgodnienia",
     status_open: "Otwarta",
+    status_voorschot: "Przedpłata",
     status_paid: "Zapłacona",
     status_overdue: "Zaległa",
+
+    phase_voorschot: "Przedpłata",
+    phase_restant: "Końcowa",
+
+    dupochron_heading: "Warunki i akceptacja",
+    dupochron_subtitle: "Przeczytaj uważnie ofertę oraz warunki przed dokonaniem wyboru.",
+    dupochron_checkbox: "Przeczytałem i zrozumiałem ofertę oraz ogólne warunki.",
+    dupochron_accept: "Akceptuję",
+    dupochron_discuss: "Chcę porozmawiać",
+    dupochron_reject: "Nie akceptuję",
+    dupochron_accept_title: "Dziękujemy za akceptację!",
+    dupochron_accept_msg: "Twoja oferta została zaakceptowana. Faktura zaliczkowa (koszty materiałów + 20% robocizny) zostanie wysłana wkrótce. Po otrzymaniu zaliczki rozpoczniemy prace.",
+    dupochron_discuss_title: "Dziękujemy za wiadomość",
+    dupochron_discuss_msg: "Otrzymaliśmy Twoją prośbę o omówienie szczegółów i skontaktujemy się z Tobą wkrótce.",
+    dupochron_discuss_prompt: "Co chciałbyś omówić?",
+    dupochron_reject_title: "Dziękujemy za poświęcony czas",
+    dupochron_reject_msg: "Szkoda, że tym razem nie doszliśmy do porozumienia. Doceniamy Twoją informację zwrotną.",
+    dupochron_reject_prompt: "Czy możesz krótko wyjaśnić, dlaczego rezygnujesz?",
+    dupochron_send_note: "Wyślij",
+    dupochron_already_decided: "Ta oferta została już oceniona.",
   },
 
   en: {
@@ -312,18 +364,45 @@ const UI_TRANSLATIONS = {
     builder_preview: "Preview",
     builder_save: "Save",
     builder_save_send: "Save & send",
-    builder_to_invoice: "Create invoice",
+    builder_split: "Split into 2 invoices",
     builder_back: "Back",
     builder_delete: "Delete",
     builder_confirm_delete: "Are you sure you want to delete this?",
+    builder_split_preview: "On split: advance (all materials + 20% labor) and remainder (80% labor).",
+    builder_split_done: "2 invoices created: advance and remainder.",
+    builder_dupochron_link: "Link for client (acceptance)",
+    builder_copy_link: "Copy link",
+    builder_link_copied: "Link copied!",
 
     status_concept: "Draft",
     status_sent: "Sent",
     status_accepted: "Accepted",
     status_rejected: "Rejected",
+    status_discuss: "Discussion",
     status_open: "Open",
+    status_voorschot: "Advance",
     status_paid: "Paid",
     status_overdue: "Overdue",
+
+    phase_voorschot: "Advance",
+    phase_restant: "Remainder",
+
+    dupochron_heading: "Terms & acceptance",
+    dupochron_subtitle: "Please read the quote and terms carefully before making your decision.",
+    dupochron_checkbox: "I have read and understood the quote and the general terms.",
+    dupochron_accept: "Accept",
+    dupochron_discuss: "Discuss",
+    dupochron_reject: "Reject",
+    dupochron_accept_title: "Thank you for your acceptance!",
+    dupochron_accept_msg: "Your quote has been accepted. The advance invoice (material costs + 20% labor) will be sent to you shortly. Once received, we'll start the work.",
+    dupochron_discuss_title: "Thank you for your message",
+    dupochron_discuss_msg: "We've received your request to discuss and will contact you soon.",
+    dupochron_discuss_prompt: "What would you like to discuss?",
+    dupochron_reject_title: "Thank you for your time",
+    dupochron_reject_msg: "It's a pity we couldn't reach an agreement this time. We appreciate your feedback.",
+    dupochron_reject_prompt: "Could you briefly explain why?",
+    dupochron_send_note: "Send",
+    dupochron_already_decided: "This quote has already been reviewed.",
   }
 };
 
@@ -355,7 +434,6 @@ const I18n = {
     document.dispatchEvent(new CustomEvent('langchange', { detail: { lang } }));
   },
 
-  // Get translated value from a multilingual field { nl: "...", pl: "...", en: "..." }
   get(field, lang = null) {
     if (!field) return '';
     if (typeof field === 'string') return field;
@@ -363,7 +441,6 @@ const I18n = {
     return field[target] || field.nl || field.en || Object.values(field)[0] || '';
   },
 
-  // Translate UI for a specific language (used in offerte preview)
   tFor(lang, key) {
     return UI_TRANSLATIONS[lang]?.[key] || UI_TRANSLATIONS.nl[key] || key;
   },

@@ -19,11 +19,9 @@
 </head>
 <body>
   <div class="doc-actions no-print">
-    <button class="btn btn-secondary btn-sm" onclick="window.history.back()">
-      ← Terug
-    </button>
-    <button class="btn btn-primary btn-sm" onclick="window.print()">
-      Afdrukken / PDF
+    <button class="btn btn-secondary btn-sm" onclick="window.print()">
+      <i data-lucide="printer" style="width:16px;height:16px;"></i>
+      PDF / Print
     </button>
   </div>
 
@@ -31,8 +29,12 @@
     <p style="text-align:center;padding:48px;">Laden...</p>
   </div>
 
+  <div id="dupochron-root"></div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
   <script src="./js/i18n.js"></script>
   <script src="./js/offerte.js"></script>
+  <script src="./js/dupochron.js"></script>
   <script>
     (async function() {
       try {
@@ -57,7 +59,6 @@
           return;
         }
 
-        // Apply branding
         const b = config.branding || {};
         const root = document.documentElement.style;
         if (b.accentColor) root.setProperty('--accent', b.accentColor);
@@ -71,6 +72,14 @@
         document.title = `${docType} ${doc.id} — ${config.company.name}`;
 
         document.getElementById('preview-root').innerHTML = Offerte.renderPreview(doc);
+
+        // Dupochron only on offertes
+        if (type === 'offerte') {
+          Dupochron.init(doc, config);
+          Dupochron.render(document.getElementById('dupochron-root'));
+        }
+
+        if (window.lucide) window.lucide.createIcons();
       } catch (e) {
         console.error(e);
         document.getElementById('preview-root').innerHTML = '<p style="text-align:center;padding:48px;">Er ging iets mis.</p>';

@@ -14,7 +14,6 @@ const Contact = {
     const dropzone = document.getElementById('dropzone');
     const input = document.getElementById('contact-photos');
     const form = document.getElementById('contact-form');
-
     if (!dropzone || !input || !form) return;
 
     input.addEventListener('change', (e) => this.handleFiles(e.target.files));
@@ -44,7 +43,7 @@ const Contact = {
       }
       if (!file.type.startsWith('image/')) continue;
       if (file.size > maxSize) {
-        alert(`File ${file.name} is too large (max ${this.config.contact?.maxPhotoSizeMB || 10}MB).`);
+        alert(`File ${file.name} is too large.`);
         continue;
       }
       this.photos.push(file);
@@ -93,14 +92,10 @@ const Contact = {
       this.fallbackMailto(form);
       return;
     }
-    // Otherwise let Netlify handle it; show success on next page or via AJAX
     e.preventDefault();
     try {
       const formData = new FormData(form);
-      const res = await fetch('/', {
-        method: 'POST',
-        body: formData
-      });
+      const res = await fetch('/', { method: 'POST', body: formData });
       if (res.ok) {
         document.getElementById('form-success')?.classList.add('show');
         form.reset();
@@ -110,7 +105,6 @@ const Contact = {
         throw new Error('Submit failed');
       }
     } catch (err) {
-      // Fallback: open mailto
       this.fallbackMailto(form);
     }
   },

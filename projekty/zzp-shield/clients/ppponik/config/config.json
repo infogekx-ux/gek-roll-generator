@@ -20,12 +20,7 @@
     "phone": "+31645165752",
     "whatsapp": "+31645165752",
     "email": "info.ppponik@gmail.com",
-    "website": "ppponik.netlify.app",
-    "socials": {
-      "facebook": "",
-      "instagram": "",
-      "linkedin": ""
-    }
+    "website": "ppponik.nl"
   },
 
   "branding": {
@@ -53,6 +48,7 @@
     {
       "id": "timmerwerk",
       "icon": "hammer",
+      "category": "arbeid",
       "name": { "nl": "Timmerwerk", "pl": "Stolarka", "en": "Carpentry" },
       "description": {
         "nl": "Kozijnen, betimmeringen, houten constructies en maatwerk in hout.",
@@ -65,6 +61,7 @@
     {
       "id": "meubelmontage",
       "icon": "armchair",
+      "category": "arbeid",
       "name": { "nl": "Meubelmontage", "pl": "Montaż mebli", "en": "Furniture assembly" },
       "description": {
         "nl": "Keukens, kasten, badkamermeubels — vakkundig gemonteerd.",
@@ -77,6 +74,7 @@
     {
       "id": "gipsplaten",
       "icon": "layout-panel-left",
+      "category": "arbeid",
       "name": { "nl": "Gipsplaten & wanden", "pl": "Karton-gips i ścianki", "en": "Drywall & partitions" },
       "description": {
         "nl": "Scheidingswanden, plafonds en afwerkingen in gipsplaat.",
@@ -89,6 +87,7 @@
     {
       "id": "deuren",
       "icon": "door-open",
+      "category": "arbeid",
       "name": { "nl": "Binnendeuren", "pl": "Drzwi wewnętrzne", "en": "Interior doors" },
       "description": {
         "nl": "Plaatsen en afstellen van binnendeuren, inclusief kozijnen.",
@@ -100,7 +99,8 @@
     },
     {
       "id": "vloeren",
-      "icon": "grid-3x3",
+      "icon": "layers",
+      "category": "arbeid",
       "name": { "nl": "Vloeren leggen", "pl": "Układanie podłóg", "en": "Floor installation" },
       "description": {
         "nl": "Laminaat, PVC en houten vloeren — inclusief ondervloer.",
@@ -113,6 +113,7 @@
     {
       "id": "elektra",
       "icon": "zap",
+      "category": "arbeid",
       "name": { "nl": "Elektra", "pl": "Prace elektryczne", "en": "Electrical work" },
       "description": {
         "nl": "Stopcontacten, schakelaars, verlichting en kleine elektrische klussen.",
@@ -125,6 +126,7 @@
     {
       "id": "loodgieter",
       "icon": "droplet",
+      "category": "arbeid",
       "name": { "nl": "Klein loodgieterswerk", "pl": "Drobna hydraulika", "en": "Minor plumbing" },
       "description": {
         "nl": "Kranen, afvoeren, toiletten en kleine loodgietersklussen.",
@@ -137,6 +139,7 @@
     {
       "id": "schilderwerk",
       "icon": "paintbrush",
+      "category": "arbeid",
       "name": { "nl": "Schilderwerk", "pl": "Malowanie", "en": "Painting" },
       "description": {
         "nl": "Binnen- en buitenschilderwerk, behangen en lakken.",
@@ -149,6 +152,7 @@
     {
       "id": "onderhoud",
       "icon": "wrench",
+      "category": "arbeid",
       "name": { "nl": "Algeheel onderhoud", "pl": "Konserwacja ogólna", "en": "General maintenance" },
       "description": {
         "nl": "Reparaties, klein onderhoud en klussen aan huis.",
@@ -163,36 +167,42 @@
   "materials": [
     {
       "id": "gipsplaat_std",
+      "category": "materiaal",
       "name": { "nl": "Gipsplaat standaard 260x120cm", "pl": "Płyta g-k standard 260x120cm", "en": "Standard drywall 260x120cm" },
       "unit": { "nl": "plaat", "pl": "płyta", "en": "sheet" },
       "defaultPrice": 8.50
     },
     {
       "id": "laminaat_basis",
+      "category": "materiaal",
       "name": { "nl": "Laminaat basis klasse 32", "pl": "Panel laminowany klasa 32", "en": "Laminate basic class 32" },
       "unit": { "nl": "m²", "pl": "m²", "en": "m²" },
       "defaultPrice": 12.00
     },
     {
       "id": "binnendeur_std",
+      "category": "materiaal",
       "name": { "nl": "Binnendeur standaard wit", "pl": "Drzwi wewnętrzne białe standard", "en": "Standard white interior door" },
       "unit": { "nl": "stuk", "pl": "sztuka", "en": "piece" },
       "defaultPrice": 85.00
     },
     {
       "id": "kozijn_std",
+      "category": "materiaal",
       "name": { "nl": "Deurkozijn standaard", "pl": "Ościeżnica standard", "en": "Standard door frame" },
       "unit": { "nl": "stuk", "pl": "sztuka", "en": "piece" },
       "defaultPrice": 45.00
     },
     {
       "id": "muurverf_wit",
+      "category": "materiaal",
       "name": { "nl": "Muurverf wit 10L", "pl": "Farba ścienna biała 10L", "en": "White wall paint 10L" },
       "unit": { "nl": "emmer", "pl": "wiadro", "en": "bucket" },
       "defaultPrice": 35.00
     },
     {
       "id": "schroeven_doos",
+      "category": "materiaal",
       "name": { "nl": "Schroeven assortiment", "pl": "Zestaw wkrętów", "en": "Screw assortment" },
       "unit": { "nl": "doos", "pl": "pudełko", "en": "box" },
       "defaultPrice": 12.00
@@ -205,9 +215,7 @@
       "pl": "Z wieloletnim doświadczeniem w budownictwie oferuję fachową stolarkę, prace elektryczne i ogólną konserwację. Pracuję zarówno dla klientów prywatnych jak i firm w rejonie Oss i okolic.",
       "en": "With years of construction experience, I offer skilled carpentry, electrical work and general maintenance for both private clients and businesses in the Oss region."
     },
-    "experience_years": 10,
-    "certifications": [],
-    "insurance": []
+    "experience_years": 10
   },
 
   "usp": [
@@ -252,10 +260,11 @@
     "btw_percentage": 21,
     "payment_terms_days": 14,
     "offerte_valid_days": 30,
+    "voorschot_arbeid_percentage": 20,
     "terms": {
-      "nl": "Op al onze offertes en overeenkomsten zijn de Algemene Voorwaarden van toepassing.",
-      "pl": "Do wszystkich ofert i umów mają zastosowanie Ogólne Warunki.",
-      "en": "Our General Terms and Conditions apply to all quotes and agreements."
+      "nl": "Op al onze offertes en overeenkomsten zijn de volgende voorwaarden van toepassing:\n\n1. Voorschot: Materiaalkosten worden volledig vooraf gefactureerd, samen met 20% van de arbeidskosten als borg. Werkzaamheden starten na ontvangst van het voorschot.\n2. Restant: Het resterende bedrag (80% arbeidskosten) wordt gefactureerd na oplevering, met een betalingstermijn van 14 dagen.\n3. Wijzigingen: Wijzigingen in de opdracht dienen schriftelijk te worden overeengekomen.\n4. Annulering: Bij annulering na aankoop van materialen worden de materiaalkosten in rekening gebracht.",
+      "pl": "Do wszystkich ofert i umów mają zastosowanie następujące warunki:\n\n1. Przedpłata: Koszty materiałów są fakturowane w całości z góry, wraz z 20% kosztów robocizny jako zabezpieczenie. Prace rozpoczynają się po otrzymaniu przedpłaty.\n2. Reszta: Pozostała kwota (80% robocizny) jest fakturowana po zakończeniu prac, z terminem płatności 14 dni.\n3. Zmiany: Zmiany w zamówieniu muszą być uzgodnione pisemnie.\n4. Anulowanie: W przypadku anulowania po zakupie materiałów, koszty materiałów zostaną naliczone.",
+      "en": "The following terms and conditions apply to all our quotes and agreements:\n\n1. Advance payment: Material costs are invoiced in full upfront, along with 20% of labor costs as a deposit. Work starts after receipt of the advance payment.\n2. Remainder: The remaining amount (80% of labor) is invoiced upon completion, with a 14-day payment term.\n3. Changes: Changes to the assignment must be agreed upon in writing.\n4. Cancellation: In case of cancellation after material purchase, material costs will be charged."
     }
   }
 }

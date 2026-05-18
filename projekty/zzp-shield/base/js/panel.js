@@ -1,9 +1,11 @@
-// panel.js - Panel UI for ZZP'er (login, list, builder)
+// panel.js - ZZP'er dashboard (login, list, builder)
+// ZZP'er always works in their own language (config.languages.ownerLanguage)
+// On "Splits in facturen": auto-generates 2 invoices (voorschot + restant)
 
 const Panel = {
   config: null,
-  view: 'list',          // 'list' or 'builder'
-  listType: 'offerte',   // 'offerte' or 'factuur'
+  view: 'list',
+  listType: 'offerte',
   currentDoc: null,
 
   async init() {
@@ -19,7 +21,6 @@ const Panel = {
     I18n.init(this.config);
     Offerte.init(this.config);
 
-    // ZZP'er always works in their own language (config.languages.ownerLanguage)
     const ownerLang = this.config.languages.ownerLanguage || this.config.languages.default;
     I18n.setLang(ownerLang);
 
@@ -50,7 +51,7 @@ const Panel = {
         <div class="login-card">
           <div class="logo">
             <img src="./assets/logo.png" alt="" onerror="this.style.display='none'">
-            <span><span class="logo-accent">${this.config.company.name.split('.')[0]}</span>${this.config.company.name.includes('.') ? '.' + this.config.company.name.split('.').slice(1).join('.') : ''}</span>
+            <span>${this.logoMarkup()}</span>
           </div>
           <h2 style="margin-bottom:1.5rem;">${I18n.t('panel_login_title')}</h2>
           <form id="login-form">
@@ -60,7 +61,7 @@ const Panel = {
             <div id="login-error" style="color:#C82333;margin-bottom:12px;display:none;font-size:0.9rem;">${I18n.t('panel_login_error')}</div>
             <button type="submit" class="btn btn-primary btn-block">${I18n.t('panel_login_btn')}</button>
           </form>
-          <p style="margin-top:24px;"><a href="./index.html" style="font-size:0.85rem;color:#999;">← Terug naar website</a></p>
+          <p style="margin-top:24px;"><a href="./index.html" style="font-size:0.85rem;color:#999;">← Website</a></p>
         </div>
       </div>
     `;
@@ -78,6 +79,15 @@ const Panel = {
     });
   },
 
+  logoMarkup() {
+    const name = this.config.company.name;
+    const parts = name.split('.');
+    if (parts.length > 1) {
+      return `<span class="logo-accent">${parts[0]}</span>.${parts.slice(1).join('.')}`;
+    }
+    return `<span class="logo-accent">${name}</span>`;
+  },
+
   renderPanel() {
     document.body.className = 'panel-body';
     document.body.innerHTML = `
@@ -85,7 +95,7 @@ const Panel = {
         <aside class="panel-sidebar">
           <div class="logo">
             <img src="./assets/logo.png" alt="" onerror="this.style.display='none'">
-            <span><span class="logo-accent">${this.config.company.name.split('.')[0]}</span>${this.config.company.name.includes('.') ? '.' + this.config.company.name.split('.').slice(1).join('.') : ''}</span>
+            <span>${this.logoMarkup()}</span>
           </div>
           <ul class="panel-nav">
             <li><button data-tab="offerte" class="active"><i data-lucide="file-text"></i> ${I18n.t('panel_offertes')}</button></li>
@@ -147,11 +157,12 @@ const Panel = {
 
   docCard(doc) {
     const totals = Offerte.totals(doc);
+    const phaseBadge = doc.invoicePhase ? `<span class="phase-badge">${I18n.t('phase_' + doc.invoicePhase)}</span>` : '';
     return `
       <div class="doc-card" data-open-id="${doc.id}">
         <div class="doc-card-header">
           <div>
-            <div class="doc-card-id">${doc.id}</div>
+            <div class="doc-card-id">${doc.id} ${phaseBadge}</div>
             <div class="doc-card-date">${I18n.formatDate(doc.date)}</div>
           </div>
           <span class="status-badge status-${doc.status}">${I18n.t('status_' + doc.status) || doc.status}</span>
@@ -176,20 +187,22 @@ const Panel = {
     const doc = this.currentDoc;
     const main = document.getElementById('panel-main');
     const langs = this.config.languages.available;
+    const isOfferte = doc.type === 'offerte';
+    const phaseBadge = doc.invoicePhase ? `<span class="phase-badge" style="margin-left:8px;">${I18n.t('phase_' + doc.invoicePhase)}</span>` : '';
 
     main.innerHTML = `
       <div class="panel-header">
         <div>
           <button class="btn btn-secondary btn-sm" id="btn-back"><i data-lucide="arrow-left"></i> ${I18n.t('builder_back')}</button>
-          <h1 style="margin-top:8px;">${doc.id}</h1>
+          <h1 style="margin-top:8px;">${doc.id} ${phaseBadge}</h1>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <select id="status-select" class="form-group" style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <select id="status-select" style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:#FFF;">
             ${this.statusOptions(doc.type).map(s =>
               `<option value="${s}" ${doc.status === s ? 'selected' : ''}>${I18n.t('status_' + s)}</option>`
             ).join('')}
           </select>
-          ${doc.type === 'offerte' ? `<button class="btn btn-secondary btn-sm" id="btn-to-invoice"><i data-lucide="receipt"></i> ${I18n.t('builder_to_invoice')}</button>` : ''}
+          ${isOfferte ? `<button class="btn btn-warning btn-sm" id="btn-split"><i data-lucide="split"></i> ${I18n.t('builder_split')}</button>` : ''}
           <button class="btn btn-secondary btn-sm" id="btn-delete" style="color:#C82333;border-color:#C82333;"><i data-lucide="trash-2"></i></button>
         </div>
       </div>
@@ -241,6 +254,7 @@ const Panel = {
           <button class="btn btn-secondary btn-sm" id="add-custom-btn"><i data-lucide="plus"></i> ${I18n.t('builder_add_custom')}</button>
         </div>
         <div class="totals-box" id="totals-box"></div>
+        ${isOfferte ? `<div class="split-preview" id="split-preview"></div>` : ''}
       </div>
 
       <div class="builder-card">
@@ -252,7 +266,7 @@ const Panel = {
           </div>
           <div class="form-group">
             <label>${I18n.t('builder_payment_days')}</label>
-            <input type="number" id="payment-days" value="${doc.paymentDays}" min="1">
+            <input type="number" id="payment-days" value="${doc.paymentDays}" min="0">
           </div>
         </div>
         <div class="form-group">
@@ -260,6 +274,8 @@ const Panel = {
           <textarea id="notes" rows="3">${Offerte.escapeHtml(doc.notes || '')}</textarea>
         </div>
       </div>
+
+      ${isOfferte ? this.renderDupochronInfo(doc) : ''}
 
       <div class="builder-actions">
         <button class="btn btn-secondary" id="btn-preview"><i data-lucide="eye"></i> ${I18n.t('builder_preview')}</button>
@@ -273,9 +289,35 @@ const Panel = {
     if (window.lucide) window.lucide.createIcons();
   },
 
+  renderDupochronInfo(doc) {
+    const link = `${window.location.origin}${window.location.pathname.replace('panel.html', 'offerte-view.html')}?id=${encodeURIComponent(doc.id)}&type=offerte`;
+    let dupochronDetails = '';
+    if (doc.dupochron) {
+      const d = doc.dupochron;
+      dupochronDetails = `
+        <div style="margin-top:16px;font-size:0.85rem;background:var(--card-bg);padding:12px;border-radius:6px;">
+          ${d.opened_at ? `<div>📂 Geopend: ${new Date(d.opened_at).toLocaleString()}</div>` : ''}
+          ${d.checkbox_at ? `<div>☑ Akkoord voorwaarden: ${new Date(d.checkbox_at).toLocaleString()}</div>` : ''}
+          ${d.decision_at ? `<div>✓ Beslissing (${d.decision}): ${new Date(d.decision_at).toLocaleString()}</div>` : ''}
+          ${d.decision_note ? `<div style="margin-top:8px;"><em>"${Offerte.escapeHtml(d.decision_note)}"</em></div>` : ''}
+        </div>
+      `;
+    }
+    return `
+      <div class="builder-card">
+        <h2><i data-lucide="link-2" style="display:inline-block;vertical-align:middle;"></i> ${I18n.t('builder_dupochron_link')}</h2>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="text" id="dupochron-link" value="${link}" readonly style="flex:1;min-width:200px;padding:10px;border:1px solid var(--border);border-radius:6px;font-size:0.85rem;">
+          <button class="btn btn-secondary btn-sm" id="btn-copy-link"><i data-lucide="copy"></i> ${I18n.t('builder_copy_link')}</button>
+        </div>
+        ${dupochronDetails}
+      </div>
+    `;
+  },
+
   statusOptions(type) {
-    if (type === 'factuur') return ['concept', 'sent', 'paid', 'overdue'];
-    return ['concept', 'sent', 'accepted', 'rejected'];
+    if (type === 'factuur') return ['concept', 'voorschot', 'sent', 'open', 'paid', 'overdue'];
+    return ['concept', 'sent', 'accepted', 'discuss', 'rejected'];
   },
 
   bindBuilder() {
@@ -294,29 +336,37 @@ const Panel = {
     document.getElementById('btn-save').addEventListener('click', () => {
       this.syncFromForm();
       Storage.upsert(this.currentDoc, this.currentDoc.type);
-      alert('Opgeslagen / Zapisane / Saved');
+      this.flashMessage('✓ ' + I18n.t('builder_save'));
     });
 
     document.getElementById('btn-preview').addEventListener('click', () => {
       this.syncFromForm();
       Storage.upsert(this.currentDoc, this.currentDoc.type);
-      const url = `./offerte-preview.html?id=${encodeURIComponent(this.currentDoc.id)}&type=${this.currentDoc.type}`;
+      const url = `./offerte-view.html?id=${encodeURIComponent(this.currentDoc.id)}&type=${this.currentDoc.type}`;
       window.open(url, '_blank');
     });
 
-    const toInvoice = document.getElementById('btn-to-invoice');
-    if (toInvoice) {
-      toInvoice.addEventListener('click', () => {
+    const splitBtn = document.getElementById('btn-split');
+    if (splitBtn) {
+      splitBtn.addEventListener('click', () => {
         this.syncFromForm();
+        if ((this.currentDoc.items || []).length === 0) {
+          alert('Voeg eerst regels toe.');
+          return;
+        }
         Storage.upsert(this.currentDoc, this.currentDoc.type);
-        const invoice = Offerte.toInvoice(this.currentDoc);
-        Storage.upsert(invoice, 'factuur');
+        const { voorschot, restant } = Offerte.splitInvoice(this.currentDoc);
+        Storage.upsert(voorschot, 'factuur');
+        Storage.upsert(restant, 'factuur');
+        this.currentDoc.generatedInvoices = [voorschot.id, restant.id];
+        this.currentDoc.status = 'accepted';
+        Storage.upsert(this.currentDoc, 'offerte');
+        alert(`${I18n.t('builder_split_done')}\n\n${voorschot.id}: ${I18n.formatPrice(Offerte.totals(voorschot).total)}\n${restant.id}: ${I18n.formatPrice(Offerte.totals(restant).total)}`);
         this.listType = 'factuur';
-        this.currentDoc = invoice;
         document.querySelectorAll('.panel-nav button').forEach(b => {
           b.classList.toggle('active', b.dataset.tab === 'factuur');
         });
-        this.renderBuilder();
+        this.renderList();
       });
     }
 
@@ -327,6 +377,28 @@ const Panel = {
     document.getElementById('status-select').addEventListener('change', (e) => {
       this.currentDoc.status = e.target.value;
     });
+
+    const copyBtn = document.getElementById('btn-copy-link');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => {
+        const linkInput = document.getElementById('dupochron-link');
+        linkInput.select();
+        document.execCommand('copy');
+        copyBtn.innerHTML = `✓ ${I18n.t('builder_link_copied')}`;
+        setTimeout(() => {
+          copyBtn.innerHTML = `<i data-lucide="copy"></i> ${I18n.t('builder_copy_link')}`;
+          if (window.lucide) window.lucide.createIcons();
+        }, 2000);
+      });
+    }
+  },
+
+  flashMessage(msg) {
+    const f = document.createElement('div');
+    f.textContent = msg;
+    f.style.cssText = 'position:fixed;top:20px;right:20px;background:var(--success);color:#FFF;padding:12px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:9999;font-weight:600;';
+    document.body.appendChild(f);
+    setTimeout(() => f.remove(), 2000);
   },
 
   syncFromForm() {
@@ -337,26 +409,21 @@ const Panel = {
     doc.client.address = document.getElementById('client-address').value;
     doc.client.language = document.getElementById('client-lang').value;
     doc.validDays = parseInt(document.getElementById('valid-days').value, 10) || 30;
-    doc.paymentDays = parseInt(document.getElementById('payment-days').value, 10) || 14;
+    doc.paymentDays = parseInt(document.getElementById('payment-days').value, 10) || 0;
     doc.notes = document.getElementById('notes').value;
     doc.status = document.getElementById('status-select').value;
-    // Items are already kept in sync via inline editing
   },
 
   addRow(refType) {
     const item = { refType, refId: '', quantity: 1, price: 0, description: '', unit: '' };
     if (refType === 'service') {
       const first = this.config.services[0];
-      if (first) {
-        item.refId = first.id;
-        item.price = first.defaultRate;
-      }
+      if (first) { item.refId = first.id; item.price = first.defaultRate; }
     } else if (refType === 'material') {
       const first = this.config.materials[0];
-      if (first) {
-        item.refId = first.id;
-        item.price = first.defaultPrice;
-      }
+      if (first) { item.refId = first.id; item.price = first.defaultPrice; }
+    } else {
+      item.category = 'arbeid'; // default custom rows to arbeid
     }
     this.currentDoc.items.push(item);
     this.renderItems();
@@ -374,6 +441,9 @@ const Panel = {
     }
 
     body.innerHTML = items.map((item, idx) => {
+      const cat = Offerte.getCategory(item);
+      const catBadge = `<span class="cat-${cat}">${cat}</span>`;
+
       let descCell = '';
       if (item.refType === 'service') {
         descCell = `
@@ -382,6 +452,7 @@ const Panel = {
               `<option value="${s.id}" ${s.id === item.refId ? 'selected' : ''}>${I18n.get(s.name, ownerLang)}</option>`
             ).join('')}
           </select>
+          ${catBadge}
         `;
       } else if (item.refType === 'material') {
         descCell = `
@@ -390,12 +461,19 @@ const Panel = {
               `<option value="${m.id}" ${m.id === item.refId ? 'selected' : ''}>${I18n.get(m.name, ownerLang)}</option>`
             ).join('')}
           </select>
+          ${catBadge}
         `;
       } else {
-        descCell = `<input type="text" data-idx="${idx}" data-field="description" value="${Offerte.escapeHtml(item.description || '')}" placeholder="${I18n.t('offerte_description')}">`;
+        descCell = `
+          <input type="text" data-idx="${idx}" data-field="description" value="${Offerte.escapeHtml(item.description || '')}" placeholder="${I18n.t('offerte_description')}">
+          <select data-idx="${idx}" data-field="category" style="margin-top:4px;font-size:0.8rem;width:auto;">
+            <option value="arbeid" ${cat === 'arbeid' ? 'selected' : ''}>arbeid</option>
+            <option value="materiaal" ${cat === 'materiaal' ? 'selected' : ''}>materiaal</option>
+          </select>
+        `;
       }
 
-      const unitCell = (item.refType === 'custom')
+      const unitCell = (item.refType === 'custom' || !item.refType)
         ? `<input type="text" data-idx="${idx}" data-field="unit" value="${Offerte.escapeHtml(item.unit || '')}">`
         : `<span style="color:#666;font-size:0.85rem;">${Offerte.escapeHtml(Offerte.resolveUnit(item, ownerLang))}</span>`;
 
@@ -438,7 +516,6 @@ const Panel = {
     if (!item) return;
     item[field] = e.target.value;
 
-    // When switching refId for a service/material, auto-update price
     if (field === 'refId') {
       if (item.refType === 'service') {
         const s = this.config.services.find(x => x.id === item.refId);
@@ -448,8 +525,9 @@ const Panel = {
         if (m) item.price = m.defaultPrice;
       }
       this.renderItems();
+    } else if (field === 'category') {
+      this.renderItems();
     } else {
-      // Update just the totals on quantity/price change for performance
       const row = e.target.closest('tr');
       if (row && (field === 'quantity' || field === 'price')) {
         const lineTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.price) || 0);
@@ -463,12 +541,27 @@ const Panel = {
     const totals = Offerte.totals(this.currentDoc);
     const btw = this.currentDoc.btwPercentage || 21;
     const box = document.getElementById('totals-box');
-    if (!box) return;
-    box.innerHTML = `
-      <div class="totals-row"><span>${I18n.t('offerte_subtotal')}</span><span>${I18n.formatPrice(totals.subtotal)}</span></div>
-      <div class="totals-row"><span>${I18n.t('offerte_btw')} ${btw}%</span><span>${I18n.formatPrice(totals.btw)}</span></div>
-      <div class="totals-row total"><span>${I18n.t('offerte_total')}</span><span>${I18n.formatPrice(totals.total)}</span></div>
-    `;
+    if (box) {
+      box.innerHTML = `
+        <div class="totals-row"><span>${I18n.t('offerte_subtotal')}</span><span>${I18n.formatPrice(totals.subtotal)}</span></div>
+        <div class="totals-row"><span>${I18n.t('offerte_btw')} ${btw}%</span><span>${I18n.formatPrice(totals.btw)}</span></div>
+        <div class="totals-row total"><span>${I18n.t('offerte_total')}</span><span>${I18n.formatPrice(totals.total)}</span></div>
+      `;
+    }
+
+    const splitBox = document.getElementById('split-preview');
+    if (splitBox && this.currentDoc.type === 'offerte') {
+      const preview = Offerte.splitPreview(this.currentDoc);
+      const arbeidPct = this.config.legal?.voorschot_arbeid_percentage || 20;
+      splitBox.innerHTML = `
+        <strong><i data-lucide="split" style="display:inline-block;vertical-align:middle;width:16px;height:16px;"></i> ${I18n.t('builder_split_preview')}</strong>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;">
+          <div><strong>${I18n.t('phase_voorschot')}:</strong> ${I18n.formatPrice(preview.voorschot.total)}<br><small>100% materiaal + ${arbeidPct}% arbeid</small></div>
+          <div><strong>${I18n.t('phase_restant')}:</strong> ${I18n.formatPrice(preview.restant.total)}<br><small>${100 - arbeidPct}% arbeid</small></div>
+        </div>
+      `;
+      if (window.lucide) window.lucide.createIcons();
+    }
   }
 };
 

@@ -36,6 +36,15 @@ const App = {
     document.title = `${this.config.company.name} — ${I18n.get(this.config.company.tagline)}`;
   },
 
+  logoMarkup() {
+    const name = this.config.company.name;
+    const parts = name.split('.');
+    if (parts.length > 1) {
+      return `<span class="logo-accent">${parts[0]}</span>.${parts.slice(1).join('.')}`;
+    }
+    return `<span class="logo-accent">${name}</span>`;
+  },
+
   render() {
     this.renderHeader();
     this.renderHero();
@@ -63,7 +72,7 @@ const App = {
       <div class="container header-inner">
         <a href="#" class="logo">
           <img src="./assets/logo.png" alt="${c.name}" onerror="this.style.display='none'">
-          <span><span class="logo-accent">${c.name.split('.')[0]}</span>${c.name.includes('.') ? '.' + c.name.split('.').slice(1).join('.') : ''}</span>
+          <span>${this.logoMarkup()}</span>
         </a>
         <nav class="nav">
           <a href="#services">${I18n.t('nav_services')}</a>
@@ -356,7 +365,7 @@ const App = {
         <div class="footer-grid">
           <div class="footer-brand">
             <a href="#" class="logo">
-              <span><span class="logo-accent">${c.name.split('.')[0]}</span>${c.name.includes('.') ? '.' + c.name.split('.').slice(1).join('.') : ''}</span>
+              <span>${this.logoMarkup()}</span>
             </a>
             <p>${I18n.get(c.tagline)}</p>
           </div>

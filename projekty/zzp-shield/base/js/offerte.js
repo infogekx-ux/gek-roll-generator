@@ -1,6 +1,6 @@
-// offerte.js - Offerte/factuur builder engine
-// Storage: localStorage for v1 (single device)
-// Engine: ZZP'er works in their own language; client receives doc in chosen language
+// offerte.js - Quote/invoice engine
+// Auto-split: 1 offerte -> 2 facturen (voorschot: 100% materiaal + 20% arbeid, restant: 80% arbeid)
+// Storage: localStorage for v1
 
 const STORAGE_KEY = 'zzp_shield_data';
 
@@ -19,9 +19,7 @@ const Storage = {
       return { offertes: [], facturen: [], counters: { offerte: 0, factuur: 0 } };
     }
   },
-  save(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  },
+  save(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); },
   getById(id, type) {
     const data = this.load();
     return data[type === 'factuur' ? 'facturen' : 'offertes'].find(d => d.id === id);
@@ -53,14 +51,9 @@ const Storage = {
 
 const Offerte = {
   config: null,
-  currentDoc: null,
-  currentType: 'offerte',
 
-  init(config) {
-    this.config = config;
-  },
+  init(config) { this.config = config; },
 
-  // Build a new empty offerte/factuur with defaults
   createEmpty(type = 'offerte') {
     const id = Storage.nextNumber(type);
     const now = new Date();
@@ -81,7 +74,6 @@ const Offerte = {
     };
   },
 
-  // Calculate totals
   totals(doc) {
     const subtotal = (doc.items || []).reduce((sum, item) => {
       return sum + (parseFloat(item.quantity) || 0) * (parseFloat(item.price) || 0);
@@ -95,7 +87,94 @@ const Offerte = {
     };
   },
 
-  // Resolve item name in target language
+  // Returns 'arbeid', 'materiaal', or 'other' for an item
+  getCategory(item) {
+    if (item.category) return item.category;
+    if (item.refType === 'service') {
+      const s = this.config.services.find(x => x.id === item.refId);
+      return s?.category || 'arbeid';
+    }
+    if (item.refType === 'material') {
+      const m = this.config.materials.find(x => x.id === item.refId);
+      return m?.category || 'materiaal';
+    }
+    // Custom rows default to 'arbeid'
+    return 'arbeid';
+  },
+
+  // Sum items by category
+  totalByCategory(doc, category) {
+    return (doc.items || [])
+      .filter(item => this.getCategory(item) === category)
+      .reduce((sum, item) => sum + (parseFloat(item.quantity) || 0) * (parseFloat(item.price) || 0), 0);
+  },
+
+  // AUTO-SPLIT: 1 offerte -> 2 facturen
+  // Returns { voorschot, restant }
+  splitInvoice(offerteDoc) {
+    const arbeidPct = (this.config.legal?.voorschot_arbeid_percentage || 20) / 100;
+
+    const materiaalItems = (offerteDoc.items || []).filter(it => this.getCategory(it) === 'materiaal');
+    const arbeidItems = (offerteDoc.items || []).filter(it => this.getCategory(it) === 'arbeid');
+
+    // Voorschot: 100% materiaal + (arbeidPct) * arbeid
+    const voorschot = this.createEmpty('factuur');
+    voorschot.client = JSON.parse(JSON.stringify(offerteDoc.client || {}));
+    voorschot.sourceOfferteId = offerteDoc.id;
+    voorschot.invoicePhase = 'voorschot';
+    voorschot.paymentDays = 0;
+    voorschot.status = 'voorschot';
+    voorschot.btwPercentage = offerteDoc.btwPercentage;
+    voorschot.notes = offerteDoc.notes || '';
+    voorschot.items = [
+      ...materiaalItems.map(it => JSON.parse(JSON.stringify(it))),
+      ...arbeidItems.map(it => {
+        const copy = JSON.parse(JSON.stringify(it));
+        copy.quantity = Math.round((parseFloat(it.quantity) || 0) * arbeidPct * 100) / 100;
+        copy._splitFraction = arbeidPct;
+        return copy;
+      })
+    ];
+
+    // Restant: (1 - arbeidPct) * arbeid
+    const restant = this.createEmpty('factuur');
+    restant.client = JSON.parse(JSON.stringify(offerteDoc.client || {}));
+    restant.sourceOfferteId = offerteDoc.id;
+    restant.invoicePhase = 'restant';
+    restant.paymentDays = offerteDoc.paymentDays || 14;
+    restant.status = 'concept';
+    restant.btwPercentage = offerteDoc.btwPercentage;
+    restant.notes = offerteDoc.notes || '';
+    restant.items = arbeidItems.map(it => {
+      const copy = JSON.parse(JSON.stringify(it));
+      copy.quantity = Math.round((parseFloat(it.quantity) || 0) * (1 - arbeidPct) * 100) / 100;
+      copy._splitFraction = 1 - arbeidPct;
+      return copy;
+    });
+
+    return { voorschot, restant };
+  },
+
+  // Preview totals after split (used for showing in builder before commit)
+  splitPreview(offerteDoc) {
+    const arbeidPct = (this.config.legal?.voorschot_arbeid_percentage || 20) / 100;
+    const btwRate = (offerteDoc.btwPercentage || 21) / 100;
+    const materiaalTotal = this.totalByCategory(offerteDoc, 'materiaal');
+    const arbeidTotal = this.totalByCategory(offerteDoc, 'arbeid');
+    const voorschotSubtotal = materiaalTotal + arbeidTotal * arbeidPct;
+    const restantSubtotal = arbeidTotal * (1 - arbeidPct);
+    return {
+      voorschot: {
+        subtotal: Math.round(voorschotSubtotal * 100) / 100,
+        total: Math.round(voorschotSubtotal * (1 + btwRate) * 100) / 100
+      },
+      restant: {
+        subtotal: Math.round(restantSubtotal * 100) / 100,
+        total: Math.round(restantSubtotal * (1 + btwRate) * 100) / 100
+      }
+    };
+  },
+
   resolveItemName(item, lang) {
     if (item.refType === 'service') {
       const service = this.config.services.find(s => s.id === item.refId);
@@ -105,7 +184,6 @@ const Offerte = {
       const mat = this.config.materials.find(m => m.id === item.refId);
       if (mat) return I18n.get(mat.name, lang);
     }
-    // Custom row: use multilingual description if provided, else name field
     if (item.descriptions && typeof item.descriptions === 'object') {
       return I18n.get(item.descriptions, lang);
     }
@@ -127,7 +205,62 @@ const Offerte = {
     return item.unit || '';
   },
 
-  // Generate full HTML preview of the document in the target language
+  // Dupochron: record client decision
+  markDecision(docId, decision, note) {
+    const doc = Storage.getById(docId, 'offerte');
+    if (!doc) return null;
+    const now = new Date().toISOString();
+    doc.dupochron = doc.dupochron || {};
+    doc.dupochron.decision = decision;
+    doc.dupochron.decision_at = now;
+    if (note) doc.dupochron.decision_note = note;
+    doc.dupochron.user_agent = navigator.userAgent;
+
+    if (decision === 'accepted') {
+      doc.status = 'accepted';
+    } else if (decision === 'rejected') {
+      doc.status = 'rejected';
+      if (note) doc.rejection_reason = note;
+    } else if (decision === 'discuss') {
+      doc.status = 'discuss';
+      if (note) doc.notes = (doc.notes ? doc.notes + '\n\n' : '') + '[Klant overleg] ' + note;
+    }
+    Storage.upsert(doc, 'offerte');
+
+    // On accept: generate the 2 invoices automatically
+    if (decision === 'accepted' && !doc._splitDone) {
+      const { voorschot, restant } = this.splitInvoice(doc);
+      Storage.upsert(voorschot, 'factuur');
+      Storage.upsert(restant, 'factuur');
+      doc._splitDone = true;
+      doc.generatedInvoices = [voorschot.id, restant.id];
+      Storage.upsert(doc, 'offerte');
+    }
+
+    return doc;
+  },
+
+  markOpened(docId) {
+    const doc = Storage.getById(docId, 'offerte');
+    if (!doc) return null;
+    doc.dupochron = doc.dupochron || {};
+    if (!doc.dupochron.opened_at) {
+      doc.dupochron.opened_at = new Date().toISOString();
+      Storage.upsert(doc, 'offerte');
+    }
+    return doc;
+  },
+
+  markCheckbox(docId) {
+    const doc = Storage.getById(docId, 'offerte');
+    if (!doc) return null;
+    doc.dupochron = doc.dupochron || {};
+    doc.dupochron.checkbox_at = new Date().toISOString();
+    Storage.upsert(doc, 'offerte');
+    return doc;
+  },
+
+  // Render full HTML preview of doc in target language
   renderPreview(doc) {
     const lang = doc.client?.language || 'nl';
     const c = this.config.company;
@@ -144,7 +277,10 @@ const Offerte = {
     const fmtPrice = (n) => I18n.formatPrice(n, lang);
 
     const isInvoice = doc.type === 'factuur';
-    const docTitle = isInvoice ? t('factuur_title') : t('offerte_title');
+    let docTitle = isInvoice ? t('factuur_title') : t('offerte_title');
+    if (isInvoice && doc.invoicePhase) {
+      docTitle += ` — ${t('phase_' + doc.invoicePhase)}`;
+    }
 
     const itemRows = (doc.items || []).map(item => {
       const name = this.resolveItemName(item, lang);
@@ -232,8 +368,7 @@ const Offerte = {
         <div class="doc-footer">
           <p><strong>${t('offerte_payment')}:</strong> ${doc.paymentDays || 14} ${t('offerte_days')}</p>
           <p><strong>${t('factuur_iban')}:</strong> ${c.iban} (${c.bank}) — ${c.owner}</p>
-          ${doc.notes ? `<p style="margin-top:12px;">${this.escapeHtml(doc.notes)}</p>` : ''}
-          <p style="margin-top:12px;font-size:0.8rem;">${I18n.get(this.config.legal?.terms, lang)}</p>
+          ${doc.notes ? `<p style="margin-top:12px;white-space:pre-line;">${this.escapeHtml(doc.notes)}</p>` : ''}
         </div>
       </div>
     `;
@@ -247,17 +382,6 @@ const Offerte = {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
-  },
-
-  // Convert an offerte to a factuur
-  toInvoice(offerteDoc) {
-    const invoice = this.createEmpty('factuur');
-    invoice.client = { ...offerteDoc.client };
-    invoice.items = JSON.parse(JSON.stringify(offerteDoc.items || []));
-    invoice.notes = offerteDoc.notes;
-    invoice.btwPercentage = offerteDoc.btwPercentage;
-    invoice.sourceOfferteId = offerteDoc.id;
-    return invoice;
   }
 };
 
