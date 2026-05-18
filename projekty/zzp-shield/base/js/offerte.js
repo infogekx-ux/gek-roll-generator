@@ -70,15 +70,23 @@ const Offerte = {
       notes: '',
       status: 'concept',
       btwPercentage: this.config.legal?.btw_percentage || 21,
+      dupochronEnabled: true,  // boolean toggle — split into voorschot/restant on accept
+      contant: false,          // when true: no BTW, no auto-split (single invoice on accept)
       createdAt: now.toISOString()
     };
+  },
+
+  // Effective BTW % for a doc — 0 when contant mode is on
+  effectiveBtw(doc) {
+    if (doc.contant === true) return 0;
+    return doc.btwPercentage ?? this.config.legal?.btw_percentage ?? 21;
   },
 
   totals(doc) {
     const subtotal = (doc.items || []).reduce((sum, item) => {
       return sum + (parseFloat(item.quantity) || 0) * (parseFloat(item.price) || 0);
     }, 0);
-    const btw = subtotal * ((doc.btwPercentage || 21) / 100);
+    const btw = subtotal * (this.effectiveBtw(doc) / 100);
     const total = subtotal + btw;
     return {
       subtotal: Math.round(subtotal * 100) / 100,
@@ -111,7 +119,25 @@ const Offerte = {
 
   // AUTO-SPLIT: 1 offerte -> 2 facturen
   // Returns { voorschot, restant }
+  // When dupochron is OFF: returns { single } — one full invoice instead.
   splitInvoice(offerteDoc) {
+    // Backward compat: if dupochronEnabled is undefined, fall back to true unless the
+    // old boolean-style `dupochron === false` is explicitly set.
+    const dupochronOn = offerteDoc.dupochronEnabled !== false && offerteDoc.dupochron !== false;
+    const contant = offerteDoc.contant === true;
+    if (!dupochronOn || contant) {
+      const single = this.createEmpty('factuur');
+      single.client = JSON.parse(JSON.stringify(offerteDoc.client || {}));
+      single.sourceOfferteId = offerteDoc.id;
+      single.invoicePhase = 'eenmalig';
+      single.paymentDays = offerteDoc.paymentDays || (this.config.legal?.payment_terms_days || 14);
+      single.status = 'concept';
+      single.btwPercentage = offerteDoc.btwPercentage;
+      single.contant = contant;
+      single.notes = offerteDoc.notes || '';
+      single.items = (offerteDoc.items || []).map(it => JSON.parse(JSON.stringify(it)));
+      return { single };
+    }
     const arbeidPct = (this.config.legal?.voorschot_arbeid_percentage || 20) / 100;
 
     const materiaalItems = (offerteDoc.items || []).filter(it => this.getCategory(it) === 'materiaal');
@@ -158,7 +184,7 @@ const Offerte = {
   // Preview totals after split (used for showing in builder before commit)
   splitPreview(offerteDoc) {
     const arbeidPct = (this.config.legal?.voorschot_arbeid_percentage || 20) / 100;
-    const btwRate = (offerteDoc.btwPercentage || 21) / 100;
+    const btwRate = this.effectiveBtw(offerteDoc) / 100;
     const materiaalTotal = this.totalByCategory(offerteDoc, 'materiaal');
     const arbeidTotal = this.totalByCategory(offerteDoc, 'arbeid');
     const voorschotSubtotal = materiaalTotal + arbeidTotal * arbeidPct;
@@ -227,10 +253,14 @@ const Offerte = {
     return data.facturen.filter(f => f.sourceOfferteId === offerteId);
   },
 
-  // Dupochron: record client decision
+  // Dupochron: record client decision.
+  // doc.dupochronEnabled — boolean toggle controlling the auto-split.
+  // doc.dupochron — history bag (opened_at / checkbox_at / decision / decision_at / note / UA).
   markDecision(docId, decision, note) {
     const doc = Storage.getById(docId, 'offerte');
     if (!doc) return null;
+    if (decision === 'change') decision = 'discuss';  // vocab alias
+
     const now = new Date().toISOString();
     doc.dupochron = doc.dupochron || {};
     doc.dupochron.decision = decision;
@@ -249,13 +279,20 @@ const Offerte = {
     }
     Storage.upsert(doc, 'offerte');
 
-    // On accept: generate the 2 invoices automatically
-    if (decision === 'accepted' && !doc._splitDone) {
-      const { voorschot, restant } = this.splitInvoice(doc);
-      Storage.upsert(voorschot, 'factuur');
-      Storage.upsert(restant, 'factuur');
+    // On accept: generate invoices (split when dupochron+!contant, single otherwise)
+    if (decision === 'accepted' && !doc._splitDone && doc.contant !== true) {
+      const result = this.splitInvoice(doc);
+      const generated = [];
+      if (result.single) {
+        Storage.upsert(result.single, 'factuur');
+        generated.push(result.single.id);
+      } else {
+        Storage.upsert(result.voorschot, 'factuur');
+        Storage.upsert(result.restant, 'factuur');
+        generated.push(result.voorschot.id, result.restant.id);
+      }
       doc._splitDone = true;
-      doc.generatedInvoices = [voorschot.id, restant.id];
+      doc.generatedInvoices = generated;
       Storage.upsert(doc, 'offerte');
     }
 
@@ -373,14 +410,16 @@ const Offerte = {
         </table>
 
         <div class="doc-totals">
-          <div class="doc-totals-row">
-            <span>${t('offerte_subtotal')}</span>
-            <span>${fmtPrice(totals.subtotal)}</span>
-          </div>
-          <div class="doc-totals-row">
-            <span>${t('offerte_btw')} ${doc.btwPercentage || 21}%</span>
-            <span>${fmtPrice(totals.btw)}</span>
-          </div>
+          ${this.effectiveBtw(doc) > 0 ? `
+            <div class="doc-totals-row">
+              <span>${t('offerte_subtotal')}</span>
+              <span>${fmtPrice(totals.subtotal)}</span>
+            </div>
+            <div class="doc-totals-row">
+              <span>${t('offerte_btw')} ${this.effectiveBtw(doc)}%</span>
+              <span>${fmtPrice(totals.btw)}</span>
+            </div>
+          ` : ''}
           <div class="doc-totals-row grand">
             <span>${t('offerte_total').toUpperCase()}</span>
             <span>${fmtPrice(totals.total)}</span>
@@ -390,6 +429,7 @@ const Offerte = {
         <div class="doc-footer">
           <p><strong>${t('offerte_payment')}:</strong> ${doc.paymentDays || 14} ${t('offerte_days')}</p>
           <p><strong>${t('factuur_iban')}:</strong> ${c.iban} (${c.bank}) — ${c.owner}</p>
+          ${doc.contant ? `<p style="margin-top:8px;font-size:0.85rem;color:var(--text-muted);">💵 ${t('contant_note_doc') || 'Cash — single payment, no VAT.'}</p>` : ''}
           ${doc.notes ? `<p style="margin-top:12px;white-space:pre-line;">${this.escapeHtml(doc.notes)}</p>` : ''}
         </div>
       </div>

@@ -35,49 +35,136 @@
   <script src="./js/i18n.js"></script>
   <script src="./js/offerte.js"></script>
   <script src="./js/dupochron.js"></script>
+  <script src="./js/email-sender.js"></script>
   <script>
+    /* offerte-view.html — three entry modes:
+       (1) Owner preview: panel.html links here with ?id=… and the offerte sits in localStorage.
+       (2) Client from email: the email CTA links include a payload in the URL hash so
+           the offerte and a config snapshot can be reconstructed without localStorage.
+       (3) Action: ?action=accept|change|reject performs the response inline. */
+
     (async function() {
       try {
-        const res = await fetch('./config/config.json');
-        const config = await res.json();
-        window.AppConfig = config;
-        I18n.init(config);
-        Offerte.init(config);
-
         const params = new URLSearchParams(window.location.search);
-        const id = params.get('id');
-        const type = params.get('type') || 'offerte';
+        const id     = params.get('id');
+        const type   = params.get('type') || 'offerte';
+        const action = params.get('action');
 
         if (!id) {
           document.getElementById('preview-root').innerHTML = '<p style="text-align:center;padding:48px;">Geen ID opgegeven.</p>';
           return;
         }
 
-        const doc = Storage.getById(id, type);
+        // --- Resolve config and doc ---
+        let config = null, doc = null, fromHash = false;
+
+        // (A) Try hash payload (cross-device, email entry)
+        const hash = window.location.hash;
+        if (hash && hash.indexOf('#data=') === 0) {
+          try {
+            const raw = decodeURIComponent(hash.substring(6));
+            const decoded = decodeURIComponent(escape(atob(raw)));
+            const payload = JSON.parse(decoded);
+            if (payload?.offerte && payload?.config) {
+              doc = payload.offerte;
+              config = payload.config;
+              fromHash = true;
+            }
+          } catch (e) {
+            console.warn('Hash payload could not be decoded:', e);
+          }
+        }
+
+        // (B) Local config + Storage fallback (owner preview)
+        if (!config) {
+          const res = await fetch('./config/config.json');
+          config = await res.json();
+        }
+        window.AppConfig = config;
+        I18n.init(config);
+        Offerte.init(config);
+        if (window.EmailSender) EmailSender.init(config);
+
+        if (!doc) {
+          doc = Storage.getById(id, type);
+        }
         if (!doc) {
           document.getElementById('preview-root').innerHTML = `<p style="text-align:center;padding:48px;">Document ${id} niet gevonden.</p>`;
           return;
         }
 
+        // If we came from hash, persist a copy locally so refresh / back-button works
+        // and so the dupochron module (which writes via Storage) doesn't blow up.
+        if (fromHash) {
+          try { Storage.upsert(doc, type); } catch (e) { /* private browsing */ }
+        }
+
         const b = config.branding || {};
         const root = document.documentElement.style;
-        if (b.accentColor) root.setProperty('--accent', b.accentColor);
+        if (b.accentColor)      root.setProperty('--accent', b.accentColor);
         if (b.accentColorLight) root.setProperty('--accent-light', b.accentColorLight);
-        if (b.fontHeading) root.setProperty('--font-heading', `'${b.fontHeading}', sans-serif`);
-        if (b.fontBody) root.setProperty('--font-body', `'${b.fontBody}', sans-serif`);
+        if (b.fontHeading)      root.setProperty('--font-heading', `'${b.fontHeading}', sans-serif`);
+        if (b.fontBody)         root.setProperty('--font-body', `'${b.fontBody}', sans-serif`);
 
         const lang = doc.client?.language || 'nl';
+        I18n.setLang(lang);
         document.documentElement.lang = lang;
         const docType = doc.type === 'factuur' ? I18n.tFor(lang, 'factuur_title') : I18n.tFor(lang, 'offerte_title');
         document.title = `${docType} ${doc.id} — ${config.company.name}`;
 
         document.getElementById('preview-root').innerHTML = Offerte.renderPreview(doc);
 
-        // Dupochron only on offertes
+        // Dupochron flow (only on offertes)
         if (type === 'offerte') {
           Dupochron.init(doc, config);
           Dupochron.render(document.getElementById('dupochron-root'));
+
+          // ?action= shortcut from email CTA
+          if (action && !doc.dupochron?.decision) {
+            const map = { accept: 'accepted', change: 'discuss', reject: 'rejected' };
+            const resolved = map[action] || action;
+            // Tick the checkbox + open the appropriate flow
+            setTimeout(() => {
+              const cb = document.getElementById('dupochron-checkbox');
+              if (cb) {
+                cb.checked = true;
+                cb.dispatchEvent(new Event('change'));
+              }
+              if (resolved === 'accepted') {
+                // Accept can fire immediately
+                document.getElementById('dupochron-accept')?.click();
+              } else if (resolved === 'discuss') {
+                document.getElementById('dupochron-discuss')?.click();
+              } else if (resolved === 'rejected') {
+                document.getElementById('dupochron-reject')?.click();
+              }
+            }, 200);
+          }
         }
+
+        // After dupochron decision: notify owner via edge function (when payload from email)
+        document.addEventListener('dupochron-decision', async (ev) => {
+          const decision = ev.detail?.decision;
+          const note     = ev.detail?.note || '';
+          if (!decision) return;
+          try {
+            if (window.EmailSender?.sendResponse) {
+              await EmailSender.sendResponse(
+                doc.id,
+                decision,
+                note,
+                config.company?.email,
+                config.languages?.ownerLanguage || 'nl',
+                config.company?.name,
+                config.branding?.accentColor,
+                doc.client?.name,
+                doc.client?.email
+              );
+            }
+          } catch (e) {
+            console.warn('Owner notification failed:', e);
+          }
+        });
 
         if (window.lucide) window.lucide.createIcons();
       } catch (e) {

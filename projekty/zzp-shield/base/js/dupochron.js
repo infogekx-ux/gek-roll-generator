@@ -143,6 +143,10 @@ const Dupochron = {
     const rootEl = document.getElementById('dupochron-root');
     rootEl.innerHTML = this.renderResult(decision);
     this.refreshIcons();
+    // Let the page (offerte-view) react — e.g. notify the owner via edge function
+    document.dispatchEvent(new CustomEvent('dupochron-decision', {
+      detail: { decision, note: note || '', docId: this.doc.id }
+    }));
   },
 
   renderResult(decision) {

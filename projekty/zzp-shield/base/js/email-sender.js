@@ -1,44 +1,119 @@
-// email-sender.js - Email delivery wrapper
-// v1: mailto: fallback (opens the user's email client with prefilled subject + body)
-// v2-ready: this module's surface stays the same when we move to a Supabase Edge Function + Resend.
-// All bodies/subjects are templated per-language from config.company values.
+// email-sender.js — Email delivery wrapper
+//
+// Offerte → Resend via Supabase Edge Function (branded HTML with 3 CTAs).
+//          The CTA URLs embed the full offerte+config in the URL hash so the
+//          client can open the link on any device without needing localStorage.
+// Factuur / Oplevering → mailto: fallback (opens the user's email client).
+//
+// Edge function URL + anon key come from config.email; defaults fall back to the
+// known GEK-X Supabase project.
 
 const EmailSender = {
   config: null,
 
   init(config) { this.config = config; },
 
-  // Public site URL for client-facing view of a doc.
+  endpoints() {
+    const cfg = this.config?.email || {};
+    return {
+      sendUrl: cfg.sendUrl || 'https://dkihhmphimfqhyuzajwc.supabase.co/functions/v1/zzp-offerte',
+      anonKey: cfg.anonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRraWhobXBoaW1mcWh5dXphandjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MzI0NzQsImV4cCI6MjA4NzEwODQ3NH0.ky8a6mcPzlRKZyit6JbuyCJ2ZA7KnH6h2mmzpzNmjsw',
+      viewBaseUrl: cfg.viewBaseUrl || (window.location.origin + window.location.pathname.replace(/[^/]+$/, '')).replace(/\/$/, '')
+    };
+  },
+
   viewUrl(type, doc) {
     const base = window.location.origin + window.location.pathname.replace(/[^/]+$/, '');
     if (type === 'oplevering') return `${base}oplevering-view.html?id=${encodeURIComponent(doc.id)}`;
     return `${base}offerte-view.html?id=${encodeURIComponent(doc.id)}&type=${type}`;
   },
 
-  // Open the OS email client with a prefilled message
   openMailto(toEmail, subject, body) {
     const url = `mailto:${encodeURIComponent(toEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = url;
   },
 
+  // ====== OFFERTE — via Resend Edge Function with 3 CTA branded email ======
   async sendOfferte(offerteId) {
     const doc = Storage.getById(offerteId, 'offerte');
     if (!doc?.client?.email) return { success: false, error: 'No client email' };
 
-    const lang = doc.client.language || 'nl';
-    const subject = this.subject('offerte', doc, lang);
-    const body = this.body('offerte', doc, lang, this.viewUrl('offerte', doc));
+    const ep = this.endpoints();
+    const payload = {
+      type: 'send',
+      offerte: doc,
+      config: this.config,
+      viewBaseUrl: ep.viewBaseUrl,
+      ownerEmail: this.config?.company?.email
+    };
 
-    this.openMailto(doc.client.email, subject, body);
+    try {
+      const res = await fetch(ep.sendUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: ep.anonKey,
+          Authorization: 'Bearer ' + ep.anonKey
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        // Surface server error; fall back to mailto so the owner can still send manually
+        console.error('Edge function send failed:', data);
+        const lang = doc.client.language || 'nl';
+        const subject = this.subject('offerte', doc, lang);
+        const body = this.body('offerte', doc, lang, this.viewUrl('offerte', doc));
+        this.openMailto(doc.client.email, subject, body);
+        return { success: false, error: data.error || 'Resend failed', fallback: 'mailto' };
+      }
 
-    if (doc.status === 'concept') doc.status = 'sent';
-    doc.dupochron = doc.dupochron || {};
-    doc.dupochron.sent_at = doc.dupochron.sent_at || new Date().toISOString();
-    Storage.upsert(doc, 'offerte');
+      // Record send + audit data on the offerte
+      if (doc.status === 'concept') doc.status = 'sent';
+      doc.dupochron = doc.dupochron || {};
+      doc.dupochron.sent_at = new Date().toISOString();
+      doc.email_message_id = data.message_id;
+      doc.email_urls = data.urls;
+      Storage.upsert(doc, 'offerte');
 
-    return { success: true };
+      return { success: true, message_id: data.message_id, sent_to: data.sent_to, urls: data.urls };
+    } catch (e) {
+      console.error('Network error calling edge function:', e);
+      // Fall back to mailto
+      const lang = doc.client.language || 'nl';
+      const subject = this.subject('offerte', doc, lang);
+      const body = this.body('offerte', doc, lang, this.viewUrl('offerte', doc));
+      this.openMailto(doc.client.email, subject, body);
+      return { success: false, error: String(e), fallback: 'mailto' };
+    }
   },
 
+  // ====== Response from offerte-view (client clicked CTA) → notify owner ======
+  async sendResponse(offerteId, action, note, ownerEmail, ownerLang, companyName, accentColor, clientName, clientEmail) {
+    const ep = this.endpoints();
+    try {
+      const res = await fetch(ep.sendUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: ep.anonKey,
+          Authorization: 'Bearer ' + ep.anonKey
+        },
+        body: JSON.stringify({
+          type: 'respond',
+          offerteId, action, note,
+          ownerEmail, ownerLang, companyName, accentColor,
+          clientName, clientEmail
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      return { success: res.ok, error: data.error, message_id: data.message_id };
+    } catch (e) {
+      return { success: false, error: String(e) };
+    }
+  },
+
+  // ====== FACTUUR & OPLEVERING — mailto fallback (unchanged) ======
   async sendFactuur(factuurId) {
     const doc = Storage.getById(factuurId, 'factuur');
     if (!doc?.client?.email) return { success: false, error: 'No client email' };
@@ -46,7 +121,6 @@ const EmailSender = {
     const lang = doc.client.language || 'nl';
     const subject = this.subject('factuur', doc, lang);
     const body = this.body('factuur', doc, lang, this.viewUrl('factuur', doc));
-
     this.openMailto(doc.client.email, subject, body);
 
     if (doc.status === 'concept' || doc.status === 'voorschot') {
@@ -54,7 +128,6 @@ const EmailSender = {
     }
     doc.sent_at = doc.sent_at || new Date().toISOString();
     Storage.upsert(doc, 'factuur');
-
     return { success: true };
   },
 
@@ -65,9 +138,7 @@ const EmailSender = {
     const lang = doc.client.language || 'nl';
     const subject = this.subject('oplevering', doc, lang);
     const body = this.body('oplevering', doc, lang, this.viewUrl('oplevering', doc));
-
     this.openMailto(doc.client.email, subject, body);
-
     if (window.Oplevering) Oplevering.send(offerteId);
     return { success: true };
   },

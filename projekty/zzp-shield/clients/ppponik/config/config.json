@@ -22,7 +22,6 @@
     "email": "info.ppponik@gmail.com",
     "website": "ppponik.nl"
   },
-
   "branding": {
     "accentColor": "#C8962E",
     "accentColorLight": "#F5E6C8",
@@ -33,182 +32,268 @@
     "fontBody": "Open Sans",
     "logoHeight": "60px"
   },
-
   "languages": {
     "default": "nl",
-    "available": ["nl", "pl", "en"],
+    "available": [
+      "nl",
+      "pl",
+      "en"
+    ],
     "ownerLanguage": "pl"
   },
 
-  "panel": {
-    "pin": "1234"
+  "email": {
+    "sendUrl": "https://dkihhmphimfqhyuzajwc.supabase.co/functions/v1/zzp-offerte",
+    "anonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRraWhobXBoaW1mcWh5dXphandjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MzI0NzQsImV4cCI6MjA4NzEwODQ3NH0.ky8a6mcPzlRKZyit6JbuyCJ2ZA7KnH6h2mmzpzNmjsw",
+    "viewBaseUrl": "https://ppponik.netlify.app"
   },
-
   "services": [
     {
       "id": "timmerwerk",
       "icon": "hammer",
       "category": "arbeid",
-      "name": { "nl": "Timmerwerk", "pl": "Stolarka", "en": "Carpentry" },
+      "name": {
+        "nl": "Timmerwerk",
+        "pl": "Stolarka",
+        "en": "Carpentry"
+      },
       "description": {
         "nl": "Kozijnen, betimmeringen, houten constructies en maatwerk in hout.",
         "pl": "Okna, zabudowy, konstrukcje drewniane i prace na wymiar.",
         "en": "Frames, paneling, wooden constructions and custom woodwork."
       },
       "priceType": "hourly",
-      "defaultRate": 45.00
+      "defaultRate": 45.0
     },
     {
       "id": "meubelmontage",
       "icon": "armchair",
       "category": "arbeid",
-      "name": { "nl": "Meubelmontage", "pl": "Montaż mebli", "en": "Furniture assembly" },
+      "name": {
+        "nl": "Meubelmontage",
+        "pl": "Montaż mebli",
+        "en": "Furniture assembly"
+      },
       "description": {
         "nl": "Keukens, kasten, badkamermeubels — vakkundig gemonteerd.",
         "pl": "Kuchnie, szafy, meble łazienkowe — fachowy montaż.",
         "en": "Kitchens, wardrobes, bathroom furniture — expertly assembled."
       },
       "priceType": "hourly",
-      "defaultRate": 45.00
+      "defaultRate": 45.0
     },
     {
       "id": "gipsplaten",
       "icon": "layout-panel-left",
       "category": "arbeid",
-      "name": { "nl": "Gipsplaten & wanden", "pl": "Karton-gips i ścianki", "en": "Drywall & partitions" },
+      "name": {
+        "nl": "Gipsplaten & wanden",
+        "pl": "Karton-gips i ścianki",
+        "en": "Drywall & partitions"
+      },
       "description": {
         "nl": "Scheidingswanden, plafonds en afwerkingen in gipsplaat.",
         "pl": "Ścianki działowe, sufity i wykończenia z karton-gipsu.",
         "en": "Partition walls, ceilings and drywall finishing."
       },
       "priceType": "m2",
-      "defaultRate": 35.00
+      "defaultRate": 35.0
     },
     {
       "id": "deuren",
       "icon": "door-open",
       "category": "arbeid",
-      "name": { "nl": "Binnendeuren", "pl": "Drzwi wewnętrzne", "en": "Interior doors" },
+      "name": {
+        "nl": "Binnendeuren",
+        "pl": "Drzwi wewnętrzne",
+        "en": "Interior doors"
+      },
       "description": {
         "nl": "Plaatsen en afstellen van binnendeuren, inclusief kozijnen.",
         "pl": "Montaż i regulacja drzwi wewnętrznych z ościeżnicami.",
         "en": "Installation and adjustment of interior doors with frames."
       },
       "priceType": "per_unit",
-      "defaultRate": 120.00
+      "defaultRate": 120.0
     },
     {
       "id": "vloeren",
       "icon": "layers",
       "category": "arbeid",
-      "name": { "nl": "Vloeren leggen", "pl": "Układanie podłóg", "en": "Floor installation" },
+      "name": {
+        "nl": "Vloeren leggen",
+        "pl": "Układanie podłóg",
+        "en": "Floor installation"
+      },
       "description": {
         "nl": "Laminaat, PVC en houten vloeren — inclusief ondervloer.",
         "pl": "Panele, PVC i drewno — z podkładem.",
         "en": "Laminate, PVC and wooden floors — including underlay."
       },
       "priceType": "m2",
-      "defaultRate": 25.00
+      "defaultRate": 25.0
     },
     {
       "id": "elektra",
       "icon": "zap",
       "category": "arbeid",
-      "name": { "nl": "Elektra", "pl": "Prace elektryczne", "en": "Electrical work" },
+      "name": {
+        "nl": "Elektra",
+        "pl": "Prace elektryczne",
+        "en": "Electrical work"
+      },
       "description": {
         "nl": "Stopcontacten, schakelaars, verlichting en kleine elektrische klussen.",
         "pl": "Gniazdka, włączniki, oświetlenie i drobne prace elektryczne.",
         "en": "Outlets, switches, lighting and minor electrical jobs."
       },
       "priceType": "hourly",
-      "defaultRate": 50.00
+      "defaultRate": 50.0
     },
     {
       "id": "loodgieter",
       "icon": "droplet",
       "category": "arbeid",
-      "name": { "nl": "Klein loodgieterswerk", "pl": "Drobna hydraulika", "en": "Minor plumbing" },
+      "name": {
+        "nl": "Klein loodgieterswerk",
+        "pl": "Drobna hydraulika",
+        "en": "Minor plumbing"
+      },
       "description": {
         "nl": "Kranen, afvoeren, toiletten en kleine loodgietersklussen.",
         "pl": "Baterie, odpływy, toalety i drobne naprawy hydrauliczne.",
         "en": "Faucets, drains, toilets and minor plumbing repairs."
       },
       "priceType": "hourly",
-      "defaultRate": 45.00
+      "defaultRate": 45.0
     },
     {
       "id": "schilderwerk",
       "icon": "paintbrush",
       "category": "arbeid",
-      "name": { "nl": "Schilderwerk", "pl": "Malowanie", "en": "Painting" },
+      "name": {
+        "nl": "Schilderwerk",
+        "pl": "Malowanie",
+        "en": "Painting"
+      },
       "description": {
         "nl": "Binnen- en buitenschilderwerk, behangen en lakken.",
         "pl": "Malowanie wnętrz i elewacji, tapetowanie, lakierowanie.",
         "en": "Interior and exterior painting, wallpapering and varnishing."
       },
       "priceType": "m2",
-      "defaultRate": 18.00
+      "defaultRate": 18.0
     },
     {
       "id": "onderhoud",
       "icon": "wrench",
       "category": "arbeid",
-      "name": { "nl": "Algeheel onderhoud", "pl": "Konserwacja ogólna", "en": "General maintenance" },
+      "name": {
+        "nl": "Algeheel onderhoud",
+        "pl": "Konserwacja ogólna",
+        "en": "General maintenance"
+      },
       "description": {
         "nl": "Reparaties, klein onderhoud en klussen aan huis.",
         "pl": "Naprawy, drobna konserwacja i prace domowe.",
         "en": "Repairs, minor maintenance and household jobs."
       },
       "priceType": "hourly",
-      "defaultRate": 40.00
+      "defaultRate": 40.0
     }
   ],
-
   "materials": [
     {
       "id": "gipsplaat_std",
       "category": "materiaal",
-      "name": { "nl": "Gipsplaat standaard 260x120cm", "pl": "Płyta g-k standard 260x120cm", "en": "Standard drywall 260x120cm" },
-      "unit": { "nl": "plaat", "pl": "płyta", "en": "sheet" },
-      "defaultPrice": 8.50
+      "name": {
+        "nl": "Gipsplaat standaard 260x120cm",
+        "pl": "Płyta g-k standard 260x120cm",
+        "en": "Standard drywall 260x120cm"
+      },
+      "unit": {
+        "nl": "plaat",
+        "pl": "płyta",
+        "en": "sheet"
+      },
+      "defaultPrice": 8.5
     },
     {
       "id": "laminaat_basis",
       "category": "materiaal",
-      "name": { "nl": "Laminaat basis klasse 32", "pl": "Panel laminowany klasa 32", "en": "Laminate basic class 32" },
-      "unit": { "nl": "m²", "pl": "m²", "en": "m²" },
-      "defaultPrice": 12.00
+      "name": {
+        "nl": "Laminaat basis klasse 32",
+        "pl": "Panel laminowany klasa 32",
+        "en": "Laminate basic class 32"
+      },
+      "unit": {
+        "nl": "m²",
+        "pl": "m²",
+        "en": "m²"
+      },
+      "defaultPrice": 12.0
     },
     {
       "id": "binnendeur_std",
       "category": "materiaal",
-      "name": { "nl": "Binnendeur standaard wit", "pl": "Drzwi wewnętrzne białe standard", "en": "Standard white interior door" },
-      "unit": { "nl": "stuk", "pl": "sztuka", "en": "piece" },
-      "defaultPrice": 85.00
+      "name": {
+        "nl": "Binnendeur standaard wit",
+        "pl": "Drzwi wewnętrzne białe standard",
+        "en": "Standard white interior door"
+      },
+      "unit": {
+        "nl": "stuk",
+        "pl": "sztuka",
+        "en": "piece"
+      },
+      "defaultPrice": 85.0
     },
     {
       "id": "kozijn_std",
       "category": "materiaal",
-      "name": { "nl": "Deurkozijn standaard", "pl": "Ościeżnica standard", "en": "Standard door frame" },
-      "unit": { "nl": "stuk", "pl": "sztuka", "en": "piece" },
-      "defaultPrice": 45.00
+      "name": {
+        "nl": "Deurkozijn standaard",
+        "pl": "Ościeżnica standard",
+        "en": "Standard door frame"
+      },
+      "unit": {
+        "nl": "stuk",
+        "pl": "sztuka",
+        "en": "piece"
+      },
+      "defaultPrice": 45.0
     },
     {
       "id": "muurverf_wit",
       "category": "materiaal",
-      "name": { "nl": "Muurverf wit 10L", "pl": "Farba ścienna biała 10L", "en": "White wall paint 10L" },
-      "unit": { "nl": "emmer", "pl": "wiadro", "en": "bucket" },
-      "defaultPrice": 35.00
+      "name": {
+        "nl": "Muurverf wit 10L",
+        "pl": "Farba ścienna biała 10L",
+        "en": "White wall paint 10L"
+      },
+      "unit": {
+        "nl": "emmer",
+        "pl": "wiadro",
+        "en": "bucket"
+      },
+      "defaultPrice": 35.0
     },
     {
       "id": "schroeven_doos",
       "category": "materiaal",
-      "name": { "nl": "Schroeven assortiment", "pl": "Zestaw wkrętów", "en": "Screw assortment" },
-      "unit": { "nl": "doos", "pl": "pudełko", "en": "box" },
-      "defaultPrice": 12.00
+      "name": {
+        "nl": "Schroeven assortiment",
+        "pl": "Zestaw wkrętów",
+        "en": "Screw assortment"
+      },
+      "unit": {
+        "nl": "doos",
+        "pl": "pudełko",
+        "en": "box"
+      },
+      "defaultPrice": 12.0
     }
   ],
-
   "about": {
     "bio": {
       "nl": "Met jarenlange ervaring in de bouw bied ik vakkundig timmerwerk, elektra en algeheel onderhoud. Ik werk voor zowel particulieren als bedrijven in de regio Oss en omstreken.",
@@ -217,11 +302,14 @@
     },
     "experience_years": 10
   },
-
   "usp": [
     {
       "icon": "shield-check",
-      "title": { "nl": "Vakmanschap", "pl": "Fachowość", "en": "Craftsmanship" },
+      "title": {
+        "nl": "Vakmanschap",
+        "pl": "Fachowość",
+        "en": "Craftsmanship"
+      },
       "text": {
         "nl": "Jarenlange ervaring in timmerwerk, elektra en afbouw. Elk project wordt met precisie uitgevoerd.",
         "pl": "Wieloletnie doświadczenie w stolarce, elektryce i wykończeniach. Każdy projekt realizowany z precyzją.",
@@ -230,7 +318,11 @@
     },
     {
       "icon": "clock",
-      "title": { "nl": "Punctueel & betrouwbaar", "pl": "Punktualność i rzetelność", "en": "Punctual & reliable" },
+      "title": {
+        "nl": "Punctueel & betrouwbaar",
+        "pl": "Punktualność i rzetelność",
+        "en": "Punctual & reliable"
+      },
       "text": {
         "nl": "Afspraak is afspraak. Ik lever op tijd en communiceer helder over de voortgang.",
         "pl": "Umowa to umowa. Dostarczam na czas i jasno komunikuję postępy.",
@@ -239,7 +331,11 @@
     },
     {
       "icon": "banknote",
-      "title": { "nl": "Eerlijke prijzen", "pl": "Uczciwe ceny", "en": "Fair pricing" },
+      "title": {
+        "nl": "Eerlijke prijzen",
+        "pl": "Uczciwe ceny",
+        "en": "Fair pricing"
+      },
       "text": {
         "nl": "Transparante offerte vooraf, geen verrassingen achteraf. U betaalt voor kwaliteit.",
         "pl": "Przejrzysta oferta z góry, bez niespodzianek. Płacisz za jakość.",
@@ -247,15 +343,19 @@
       }
     }
   ],
-
   "contact": {
-    "formFields": ["name", "email", "phone", "message", "photos"],
+    "formFields": [
+      "name",
+      "email",
+      "phone",
+      "message",
+      "photos"
+    ],
     "mapEmbed": true,
     "whatsappButton": true,
     "maxPhotoUpload": 5,
     "maxPhotoSizeMB": 10
   },
-
   "legal": {
     "btw_percentage": 21,
     "payment_terms_days": 14,

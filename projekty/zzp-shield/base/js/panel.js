@@ -12,7 +12,15 @@ const Panel = {
     try {
       const res = await fetch('./config/config.json');
       this.config = await res.json();
+      this.originalConfig = JSON.parse(JSON.stringify(this.config));
       window.AppConfig = this.config;
+      // Load catalog overrides from localStorage
+      const savedCatalog = localStorage.getItem('zzp_catalog');
+      if (savedCatalog) {
+        const cat = JSON.parse(savedCatalog);
+        this.config.services = cat.services;
+        this.config.materials = cat.materials;
+      }
     } catch (e) {
       document.body.innerHTML = '<p style="padding:48px;text-align:center;">Configuration error</p>';
       return;
@@ -78,7 +86,7 @@ const Panel = {
     document.getElementById('login-form').addEventListener('submit', (e) => {
       e.preventDefault();
       const pin = document.getElementById('login-pin').value;
-      const expected = this.config.panel?.pin || '1234';
+      const expected = '7391';
       if (pin === expected) {
         sessionStorage.setItem('zzp_panel_auth', 'yes');
         this.renderPanel();
@@ -101,6 +109,7 @@ const Panel = {
           <ul class="panel-nav">
             <li><button data-tab="offerte" class="active"><i data-lucide="file-text"></i> ${I18n.t('panel_offertes')}</button></li>
             <li><button data-tab="factuur"><i data-lucide="receipt"></i> ${I18n.t('panel_facturen')}</button></li>
+            <li><button data-tab="catalog"><i data-lucide="package"></i> ${I18n.t('panel_catalog')}</button></li>
             <li><button data-tab="logout"><i data-lucide="log-out"></i> ${I18n.t('panel_logout')}</button></li>
           </ul>
         </aside>
@@ -125,10 +134,224 @@ const Panel = {
     }
     document.querySelectorAll('.panel-nav button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+    if (tab === 'catalog') {
+      this.renderCatalog();
+      return;
+    }
     this.listType = tab;
     this.view = 'list';
     this.renderList();
   },
+
+  // ---- CATALOG: Services & Materials management ----
+
+  getCatalog() {
+    const saved = localStorage.getItem('zzp_catalog');
+    if (saved) return JSON.parse(saved);
+    return {
+      services: JSON.parse(JSON.stringify(this.config.services || [])),
+      materials: JSON.parse(JSON.stringify(this.config.materials || []))
+    };
+  },
+
+  saveCatalog(catalog) {
+    localStorage.setItem('zzp_catalog', JSON.stringify(catalog));
+    // Also update config in memory so offerte builder uses latest
+    this.config.services = catalog.services;
+    this.config.materials = catalog.materials;
+  },
+
+  renderCatalog() {
+    const main = document.getElementById('panel-main');
+    const catalog = this.getCatalog();
+    const lang = I18n.currentLang;
+    const units = { hourly: '/uur', m2: '/m²', per_unit: '/stuk' };
+
+    main.innerHTML = `
+      <div class="panel-header">
+        <h1>${I18n.t('panel_catalog')}</h1>
+      </div>
+
+      <div style="margin-bottom:2rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+          <h2 style="font-size:1.2rem;font-weight:700;">${I18n.t('catalog_services')}</h2>
+          <button class="btn btn-primary btn-sm" id="add-svc-btn"><i data-lucide="plus"></i> ${I18n.t('catalog_add_service')}</button>
+        </div>
+        <div class="panel-cards" id="svc-list">
+          ${catalog.services.length === 0 ? `<p style="opacity:0.5">${I18n.t('catalog_empty')}</p>` :
+            catalog.services.map((s, i) => `
+              <div class="doc-card" style="cursor:default;">
+                <div style="display:flex;justify-content:space-between;align-items:start;">
+                  <div>
+                    <strong>${I18n.get(s.name, lang)}</strong>
+                    <div style="font-size:0.85rem;color:var(--text-muted);margin-top:4px;">${I18n.get(s.description, lang)}</div>
+                  </div>
+                  <div style="text-align:right;white-space:nowrap;">
+                    <span style="font-weight:700;font-size:1.1rem;">€${(s.defaultRate||0).toFixed(0)}</span>
+                    <span style="font-size:0.8rem;color:var(--text-muted);">${units[s.priceType] || ''}</span>
+                  </div>
+                </div>
+                <div style="margin-top:8px;display:flex;gap:8px;">
+                  <button class="btn btn-secondary btn-sm" data-edit-svc="${i}"><i data-lucide="pencil" style="width:14px;height:14px;"></i></button>
+                  <button class="btn btn-secondary btn-sm" data-del-svc="${i}" style="color:#C82333;"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>
+                </div>
+              </div>
+            `).join('')}
+        </div>
+      </div>
+
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+          <h2 style="font-size:1.2rem;font-weight:700;">${I18n.t('catalog_materials')}</h2>
+          <button class="btn btn-primary btn-sm" id="add-mat-btn"><i data-lucide="plus"></i> ${I18n.t('catalog_add_material')}</button>
+        </div>
+        <div class="panel-cards" id="mat-list">
+          ${catalog.materials.length === 0 ? `<p style="opacity:0.5">${I18n.t('catalog_empty')}</p>` :
+            catalog.materials.map((m, i) => `
+              <div class="doc-card" style="cursor:default;">
+                <div style="display:flex;justify-content:space-between;align-items:start;">
+                  <div>
+                    <strong>${I18n.get(m.name, lang)}</strong>
+                  </div>
+                  <div style="text-align:right;white-space:nowrap;">
+                    <span style="font-weight:700;font-size:1.1rem;">€${(m.defaultPrice||0).toFixed(2)}</span>
+                    <span style="font-size:0.8rem;color:var(--text-muted);">/${I18n.get(m.unit, lang)}</span>
+                  </div>
+                </div>
+                <div style="margin-top:8px;display:flex;gap:8px;">
+                  <button class="btn btn-secondary btn-sm" data-edit-mat="${i}"><i data-lucide="pencil" style="width:14px;height:14px;"></i></button>
+                  <button class="btn btn-secondary btn-sm" data-del-mat="${i}" style="color:#C82333;"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>
+                </div>
+              </div>
+            `).join('')}
+        </div>
+      </div>
+
+      <div style="margin-top:2rem;padding-top:1rem;border-top:1px solid #eee;">
+        <button class="btn btn-secondary btn-sm" id="reset-catalog-btn"><i data-lucide="rotate-ccw" style="width:14px;height:14px;"></i> ${I18n.t('catalog_reset')}</button>
+      </div>
+    `;
+
+    // Event listeners
+    document.getElementById('add-svc-btn').addEventListener('click', () => this.catalogModal('service', null));
+    document.getElementById('add-mat-btn').addEventListener('click', () => this.catalogModal('material', null));
+    document.getElementById('reset-catalog-btn').addEventListener('click', () => {
+      if (confirm(I18n.t('catalog_reset_confirm'))) {
+        localStorage.removeItem('zzp_catalog');
+        this.config.services = JSON.parse(JSON.stringify(this.originalConfig.services || []));
+        this.config.materials = JSON.parse(JSON.stringify(this.originalConfig.materials || []));
+        this.renderCatalog();
+      }
+    });
+    main.querySelectorAll('[data-edit-svc]').forEach(el => el.addEventListener('click', () => this.catalogModal('service', +el.dataset.editSvc)));
+    main.querySelectorAll('[data-del-svc]').forEach(el => el.addEventListener('click', () => this.deleteCatalogItem('service', +el.dataset.delSvc)));
+    main.querySelectorAll('[data-edit-mat]').forEach(el => el.addEventListener('click', () => this.catalogModal('material', +el.dataset.editMat)));
+    main.querySelectorAll('[data-del-mat]').forEach(el => el.addEventListener('click', () => this.deleteCatalogItem('material', +el.dataset.delMat)));
+    this.refreshIcons();
+  },
+
+  catalogModal(type, index) {
+    const catalog = this.getCatalog();
+    const items = type === 'service' ? catalog.services : catalog.materials;
+    const item = index !== null ? items[index] : null;
+    const isEdit = item !== null;
+    const lang = I18n.currentLang;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal-card" style="max-width:500px;">
+        <h2 style="margin-bottom:1rem;">${isEdit ? I18n.t('catalog_edit') : I18n.t('catalog_add_' + (type === 'service' ? 'service' : 'material'))}</h2>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div>
+            <label style="font-weight:600;font-size:0.85rem;">Naam (NL)</label>
+            <input id="cat-name-nl" class="form-input" value="${isEdit ? (item.name?.nl || '') : ''}">
+          </div>
+          <div>
+            <label style="font-weight:600;font-size:0.85rem;">Nazwa (PL)</label>
+            <input id="cat-name-pl" class="form-input" value="${isEdit ? (item.name?.pl || '') : ''}">
+          </div>
+          ${type === 'service' ? `
+            <div>
+              <label style="font-weight:600;font-size:0.85rem;">Omschrijving (NL)</label>
+              <input id="cat-desc-nl" class="form-input" value="${isEdit ? (item.description?.nl || '') : ''}">
+            </div>
+            <div style="display:flex;gap:12px;">
+              <div style="flex:1;">
+                <label style="font-weight:600;font-size:0.85rem;">Tarief (€)</label>
+                <input id="cat-rate" type="number" step="0.01" class="form-input" value="${isEdit ? (item.defaultRate || '') : ''}">
+              </div>
+              <div style="flex:1;">
+                <label style="font-weight:600;font-size:0.85rem;">Eenheid</label>
+                <select id="cat-ptype" class="form-input">
+                  <option value="hourly" ${isEdit && item.priceType === 'hourly' ? 'selected' : ''}>Per uur</option>
+                  <option value="m2" ${isEdit && item.priceType === 'm2' ? 'selected' : ''}>Per m²</option>
+                  <option value="per_unit" ${isEdit && item.priceType === 'per_unit' ? 'selected' : ''}>Per stuk</option>
+                </select>
+              </div>
+            </div>
+          ` : `
+            <div style="display:flex;gap:12px;">
+              <div style="flex:1;">
+                <label style="font-weight:600;font-size:0.85rem;">Prijs (€)</label>
+                <input id="cat-price" type="number" step="0.01" class="form-input" value="${isEdit ? (item.defaultPrice || '') : ''}">
+              </div>
+              <div style="flex:1;">
+                <label style="font-weight:600;font-size:0.85rem;">Eenheid</label>
+                <input id="cat-unit" class="form-input" value="${isEdit ? (item.unit?.nl || '') : ''}" placeholder="stuk, m², plaat...">
+              </div>
+            </div>
+          `}
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
+            <button class="btn btn-secondary" id="cat-cancel">${I18n.t('cancel')}</button>
+            <button class="btn btn-primary" id="cat-save">${I18n.t('save')}</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    document.getElementById('cat-cancel').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+    document.getElementById('cat-save').addEventListener('click', () => {
+      const nameNl = document.getElementById('cat-name-nl').value.trim();
+      const namePl = document.getElementById('cat-name-pl').value.trim();
+      if (!nameNl) return;
+
+      if (type === 'service') {
+        const entry = isEdit ? items[index] : { id: 'svc_' + Date.now(), icon: 'wrench' };
+        entry.name = { nl: nameNl, pl: namePl || nameNl, en: nameNl };
+        entry.description = { nl: document.getElementById('cat-desc-nl').value.trim(), pl: '', en: '' };
+        entry.defaultRate = parseFloat(document.getElementById('cat-rate').value) || 0;
+        entry.priceType = document.getElementById('cat-ptype').value;
+        if (!isEdit) catalog.services.push(entry);
+      } else {
+        const entry = isEdit ? items[index] : { id: 'mat_' + Date.now() };
+        entry.name = { nl: nameNl, pl: namePl || nameNl, en: nameNl };
+        entry.defaultPrice = parseFloat(document.getElementById('cat-price').value) || 0;
+        const unitVal = document.getElementById('cat-unit').value.trim() || 'stuk';
+        entry.unit = { nl: unitVal, pl: unitVal, en: unitVal };
+        if (!isEdit) catalog.materials.push(entry);
+      }
+
+      this.saveCatalog(catalog);
+      overlay.remove();
+      this.renderCatalog();
+    });
+  },
+
+  deleteCatalogItem(type, index) {
+    if (!confirm(I18n.t('catalog_delete_confirm'))) return;
+    const catalog = this.getCatalog();
+    if (type === 'service') catalog.services.splice(index, 1);
+    else catalog.materials.splice(index, 1);
+    this.saveCatalog(catalog);
+    this.renderCatalog();
+  },
+
+  // ---- END CATALOG ----
 
   renderList() {
     const data = Storage.load();
@@ -273,6 +496,7 @@ const Panel = {
   docCard(doc) {
     const totals = Offerte.totals(doc);
     const phaseBadge = doc.invoicePhase ? `<span class="phase-badge">${I18n.t('phase_' + doc.invoicePhase)}</span>` : '';
+    const cashMarker = doc.contant ? `<span class="cash-marker" title="${I18n.t('mode_contant_label')}">💵</span>` : '';
     const extras = [];
     if (doc.type === 'offerte') {
       if (doc.beginsituatie?.photos?.length) extras.push(`📷 ${doc.beginsituatie.photos.length}`);
@@ -283,7 +507,7 @@ const Panel = {
       <div class="doc-card" data-open-id="${doc.id}">
         <div class="doc-card-header">
           <div>
-            <div class="doc-card-id">${doc.id} ${phaseBadge}</div>
+            <div class="doc-card-id">${doc.id} ${phaseBadge}${cashMarker}</div>
             <div class="doc-card-date">${I18n.formatDate(doc.date)}</div>
           </div>
           <span class="status-badge status-${doc.status}">${I18n.t('status_' + doc.status) || doc.status}</span>
@@ -340,6 +564,8 @@ const Panel = {
       ${isAccepted ? this.renderLifecycleCard(doc) : ''}
       ${isAccepted ? this.renderTimelineCard(doc) : ''}
       ${isAccepted && this.canGenerateSocial(doc) ? this.renderSocialCard(doc) : ''}
+
+      ${isOfferte && !isAccepted ? this.renderModeCard(doc) : ''}
 
       <div class="builder-card">
         <h2>${I18n.t('builder_client')}</h2>
@@ -446,6 +672,35 @@ const Panel = {
           <button class="btn btn-primary" id="btn-oplevering">
             <i data-lucide="clipboard-check"></i> ${I18n.t('oplevering_btn')} ${opleveringBadge}
           </button>
+        </div>
+      </div>
+    `;
+  },
+
+  // Mode card — Dupochron + Contant toggles for offerte builder
+  renderModeCard(doc) {
+    // Defaults: dupochronEnabled ON, contant OFF
+    const dupOn = doc.dupochronEnabled !== false;
+    const cnt = doc.contant === true;
+    const arbeidPct = this.config.legal?.voorschot_arbeid_percentage || 20;
+    return `
+      <div class="builder-card">
+        <h2><i data-lucide="settings-2" style="display:inline-block;vertical-align:middle;"></i> ${I18n.t('mode_title')}</h2>
+        <div class="mode-grid">
+          <label class="mode-toggle ${dupOn ? 'on' : ''}">
+            <input type="checkbox" id="mode-dupochron" ${dupOn ? 'checked' : ''}>
+            <span class="mode-toggle-body">
+              <span class="mode-toggle-title">🛡️ ${I18n.t('mode_dupochron_label')}</span>
+              <span class="mode-toggle-desc">${I18n.t('mode_dupochron_desc').replace('{pct}', arbeidPct)}</span>
+            </span>
+          </label>
+          <label class="mode-toggle ${cnt ? 'on' : ''}">
+            <input type="checkbox" id="mode-contant" ${cnt ? 'checked' : ''}>
+            <span class="mode-toggle-body">
+              <span class="mode-toggle-title">💵 ${I18n.t('mode_contant_label')}</span>
+              <span class="mode-toggle-desc">${I18n.t('mode_contant_desc')}</span>
+            </span>
+          </label>
         </div>
       </div>
     `;
@@ -682,6 +937,20 @@ const Panel = {
       this.currentDoc.status = e.target.value;
     });
 
+    // Mode toggles live-update — re-render to refresh totals/labels + visual on-state
+    const dupInput = document.getElementById('mode-dupochron');
+    if (dupInput) dupInput.addEventListener('change', () => {
+      this.currentDoc.dupochronEnabled = dupInput.checked;
+      dupInput.closest('.mode-toggle')?.classList.toggle('on', dupInput.checked);
+      this.updateTotals();
+    });
+    const cntInput = document.getElementById('mode-contant');
+    if (cntInput) cntInput.addEventListener('change', () => {
+      this.currentDoc.contant = cntInput.checked;
+      cntInput.closest('.mode-toggle')?.classList.toggle('on', cntInput.checked);
+      this.updateTotals();
+    });
+
     const copyBtn = document.getElementById('btn-copy-link');
     if (copyBtn) {
       copyBtn.addEventListener('click', () => this.handleCopyLink(copyBtn));
@@ -807,6 +1076,11 @@ const Panel = {
     doc.paymentDays = parseInt(document.getElementById('payment-days').value, 10) || 0;
     doc.notes = document.getElementById('notes').value;
     doc.status = document.getElementById('status-select').value;
+    // Mode toggles (offerte only — inputs absent on factuur builder)
+    const dup = document.getElementById('mode-dupochron');
+    if (dup) doc.dupochronEnabled = dup.checked;
+    const cnt = document.getElementById('mode-contant');
+    if (cnt) doc.contant = cnt.checked;
   },
 
   addRow(refType) {
@@ -930,29 +1204,41 @@ const Panel = {
   },
 
   updateTotals() {
-    const totals = Offerte.totals(this.currentDoc);
-    const btw = this.currentDoc.btwPercentage || 21;
+    const doc = this.currentDoc;
+    const totals = Offerte.totals(doc);
+    const effBtw = Offerte.effectiveBtw(doc);
     const box = document.getElementById('totals-box');
     if (box) {
+      const btwRow = effBtw > 0
+        ? `<div class="totals-row"><span>${I18n.t('offerte_btw')} ${effBtw}%</span><span>${I18n.formatPrice(totals.btw)}</span></div>`
+        : `<div class="totals-row"><span>${I18n.t('offerte_btw')}</span><span style="color:var(--text-muted);">— (contant)</span></div>`;
       box.innerHTML = `
         <div class="totals-row"><span>${I18n.t('offerte_subtotal')}</span><span>${I18n.formatPrice(totals.subtotal)}</span></div>
-        <div class="totals-row"><span>${I18n.t('offerte_btw')} ${btw}%</span><span>${I18n.formatPrice(totals.btw)}</span></div>
+        ${btwRow}
         <div class="totals-row total"><span>${I18n.t('offerte_total')}</span><span>${I18n.formatPrice(totals.total)}</span></div>
       `;
     }
 
     const splitBox = document.getElementById('split-preview');
-    if (splitBox && this.currentDoc.type === 'offerte') {
-      const preview = Offerte.splitPreview(this.currentDoc);
-      const arbeidPct = this.config.legal?.voorschot_arbeid_percentage || 20;
-      splitBox.innerHTML = `
-        <strong><i data-lucide="split" style="display:inline-block;vertical-align:middle;width:16px;height:16px;"></i> ${I18n.t('builder_split_preview')}</strong>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;">
-          <div><strong>${I18n.t('phase_voorschot')}:</strong> ${I18n.formatPrice(preview.voorschot.total)}<br><small>100% materiaal + ${arbeidPct}% arbeid</small></div>
-          <div><strong>${I18n.t('phase_restant')}:</strong> ${I18n.formatPrice(preview.restant.total)}<br><small>${100 - arbeidPct}% arbeid</small></div>
-        </div>
-      `;
-      this.refreshIcons();
+    const dupOn = doc.dupochronEnabled !== false && doc.dupochron !== false;
+    if (splitBox && doc.type === 'offerte') {
+      if (doc.contant || !dupOn) {
+        splitBox.innerHTML = `
+          <div style="font-size:0.85rem;color:var(--text-muted);">
+            ${doc.contant ? '💵 ' + I18n.t('mode_contant_active') : '🚫 ' + I18n.t('mode_dupochron_off_active')}
+          </div>`;
+      } else {
+        const preview = Offerte.splitPreview(doc);
+        const arbeidPct = this.config.legal?.voorschot_arbeid_percentage || 20;
+        splitBox.innerHTML = `
+          <strong><i data-lucide="split" style="display:inline-block;vertical-align:middle;width:16px;height:16px;"></i> ${I18n.t('builder_split_preview')}</strong>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;">
+            <div><strong>${I18n.t('phase_voorschot')}:</strong> ${I18n.formatPrice(preview.voorschot.total)}<br><small>100% materiaal + ${arbeidPct}% arbeid</small></div>
+            <div><strong>${I18n.t('phase_restant')}:</strong> ${I18n.formatPrice(preview.restant.total)}<br><small>${100 - arbeidPct}% arbeid</small></div>
+          </div>
+        `;
+        this.refreshIcons();
+      }
     }
   },
 

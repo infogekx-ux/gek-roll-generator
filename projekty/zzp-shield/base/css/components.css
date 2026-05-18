@@ -3,7 +3,7 @@
 /* Service cards */
 .services-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 24px;
 }
 
@@ -1211,4 +1211,62 @@
   .doc-table th, .doc-table td { padding: 8px 6px; }
   .dupochron-card { padding: 28px 20px; }
   .dupochron-actions { grid-template-columns: 1fr; }
+}
+
+/* Service pricing */
+.service-price {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 4px 12px;
+  background: var(--accent-light);
+  color: var(--accent-dark);
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  font-size: 0.85rem;
+  font-family: var(--font-heading);
+}
+
+/* Mode toggles (offerte builder) */
+.mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 700px) { .mode-grid { grid-template-columns: 1fr; } }
+
+.mode-toggle {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 16px;
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.mode-toggle:hover { border-color: var(--accent-light); }
+.mode-toggle.on {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+.mode-toggle input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.mode-toggle-body { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.mode-toggle-title { font-weight: 700; font-family: var(--font-heading); font-size: 0.95rem; }
+.mode-toggle-desc { font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; }
+
+/* Discreet cash marker on doc-card */
+.cash-marker {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 0.9rem;
+  opacity: 0.55;
+  cursor: help;
 }

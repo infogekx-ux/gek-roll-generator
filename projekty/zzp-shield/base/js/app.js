@@ -116,9 +116,12 @@ const App = {
 
     const bio = I18n.get(this.config.about?.bio || '');
     const firstSentence = bio.split('.')[0] + '.';
+    const years = this.config.about?.experience_years || 10;
 
     hero.innerHTML = `
       <div class="container hero-inner">
+        <img src="./assets/logo.png" alt="${c.name}" style="max-height:120px;margin:0 auto 2rem;">
+        <div class="about-badge" style="margin:0 auto 1.5rem;"><i data-lucide="award" style="width:18px;height:18px;"></i> ${years}+ ${I18n.t('about_experience')}</div>
         <h1>${c.name}</h1>
         <p class="hero-tagline">${I18n.get(c.tagline)}</p>
         <p class="hero-subtitle">${firstSentence}</p>
@@ -127,9 +130,9 @@ const App = {
             <i data-lucide="file-text"></i>
             ${I18n.t('hero_cta_quote')}
           </a>
-          <a href="#gallery" class="btn btn-secondary">
-            <i data-lucide="image"></i>
-            ${I18n.t('hero_cta_gallery')}
+          <a href="tel:${c.phone}" class="btn btn-secondary">
+            <i data-lucide="phone"></i>
+            ${I18n.t('hero_cta_call')}
           </a>
         </div>
       </div>
@@ -140,6 +143,12 @@ const App = {
     const section = document.getElementById('services');
     if (!section) return;
     const services = this.config.services || [];
+
+    const priceUnit = (s) => {
+      const rate = s.defaultRate ? `€${s.defaultRate.toFixed(0)}` : '';
+      const units = { hourly: '/uur', m2: '/m²', per_unit: '/stuk' };
+      return rate ? `<span class="service-price">${rate}${units[s.priceType] || ''}</span>` : '';
+    };
 
     section.innerHTML = `
       <div class="container">
@@ -155,6 +164,7 @@ const App = {
               </div>
               <h3>${I18n.get(s.name)}</h3>
               <p>${I18n.get(s.description)}</p>
+              ${priceUnit(s)}
             </div>
           `).join('')}
         </div>
@@ -189,18 +199,18 @@ const App = {
     if (!section) return;
     const images = window.GALLERY_IMAGES || [];
 
-    let body;
     if (images.length === 0) {
-      body = `
-        <div class="gallery-grid">
-          <div class="gallery-empty">
-            <i data-lucide="image-off" style="width:48px;height:48px;margin-bottom:12px;opacity:0.4;"></i>
-            <p>${I18n.t('gallery_empty')}</p>
-          </div>
+      section.style.display = 'none';
+      return;
+    }
+
+    section.style.display = '';
+    section.innerHTML = `
+      <div class="container">
+        <div class="section-heading">
+          <h2>${I18n.t('gallery_heading')}</h2>
+          <p>${I18n.t('gallery_subheading')}</p>
         </div>
-      `;
-    } else {
-      body = `
         <div class="gallery-grid" id="gallery-grid">
           ${images.map((src, i) => `
             <div class="gallery-item" data-index="${i}">
@@ -208,20 +218,10 @@ const App = {
             </div>
           `).join('')}
         </div>
-      `;
-    }
-
-    section.innerHTML = `
-      <div class="container">
-        <div class="section-heading">
-          <h2>${I18n.t('gallery_heading')}</h2>
-          <p>${I18n.t('gallery_subheading')}</p>
-        </div>
-        ${body}
       </div>
     `;
 
-    if (images.length > 0 && window.Gallery) window.Gallery.init(images);
+    if (window.Gallery) window.Gallery.init(images);
   },
 
   renderAbout() {
@@ -231,24 +231,20 @@ const App = {
     const c = this.config.company;
 
     section.innerHTML = `
-      <div class="container">
-        <div class="about-grid">
-          <div class="about-image">
-            <img src="./assets/about.jpg" alt="${c.owner}" onerror="this.parentElement.innerHTML='<i data-lucide=\\'user\\' style=\\'width:64px;height:64px;opacity:0.3;\\'></i>'">
+      <div class="container" style="max-width:800px;">
+        <div class="section-heading">
+          <h2>${I18n.t('about_heading')}</h2>
+        </div>
+        ${a.experience_years ? `
+          <div class="about-badge" style="margin:0 auto 1.5rem;">
+            <i data-lucide="award"></i>
+            ${a.experience_years}+ ${I18n.t('about_experience')}
           </div>
-          <div class="about-text">
-            <div class="section-heading" style="text-align:left;margin-bottom:1.5rem;">
-              <h2 style="text-align:left;">${I18n.t('about_heading')}</h2>
-            </div>
-            ${a.experience_years ? `
-              <div class="about-badge">
-                <i data-lucide="award"></i>
-                ${a.experience_years}+ ${I18n.t('about_experience')}
-              </div>
-            ` : ''}
-            <p>${I18n.get(a.bio)}</p>
-            <p style="margin-top:1.5rem;"><strong>${c.owner}</strong></p>
-          </div>
+        ` : ''}
+        <div class="about-text" style="text-align:center;">
+          <p>${I18n.get(a.bio)}</p>
+          <p style="margin-top:1.5rem;"><strong>${c.owner}</strong><br>
+          <span style="color:var(--text-muted);font-size:0.9rem;">${c.address.city} ${I18n.t('about_region')}</span></p>
         </div>
       </div>
     `;
@@ -384,6 +380,7 @@ const App = {
         <div class="footer-bottom">
           <span>&copy; ${year} ${c.name} — ${I18n.t('footer_rights')}</span>
           <span class="footer-credit">${I18n.t('footer_by')} <a href="https://gek-x.nl" target="_blank">GEK-X</a></span>
+          <a href="./panel.html" title="Beheer" style="opacity:0.25;transition:opacity 0.3s;display:inline-flex;margin-left:8px;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='0.25'"><i data-lucide="lock" style="width:14px;height:14px;color:var(--footer-text);"></i></a>
         </div>
       </div>
     `;
