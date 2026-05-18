@@ -205,6 +205,28 @@ const Offerte = {
     return item.unit || '';
   },
 
+  // Create a meerwerk (additional-work) invoice for an existing offerte.
+  // Returns the new (unsaved) factuur — caller stores it via Storage.upsert.
+  createMeerwerk(offerteId) {
+    const doc = Storage.getById(offerteId, 'offerte');
+    if (!doc) return null;
+    const meerwerk = this.createEmpty('factuur');
+    meerwerk.client = JSON.parse(JSON.stringify(doc.client || {}));
+    meerwerk.sourceOfferteId = offerteId;
+    meerwerk.invoicePhase = 'meerwerk';
+    meerwerk.paymentDays = doc.paymentDays || (this.config.legal?.payment_terms_days || 14);
+    meerwerk.status = 'concept';
+    meerwerk.btwPercentage = doc.btwPercentage;
+    meerwerk.items = [];
+    return meerwerk;
+  },
+
+  // All invoices linked back to an offerte (voorschot / restant / meerwerk*)
+  linkedInvoices(offerteId) {
+    const data = Storage.load();
+    return data.facturen.filter(f => f.sourceOfferteId === offerteId);
+  },
+
   // Dupochron: record client decision
   markDecision(docId, decision, note) {
     const doc = Storage.getById(docId, 'offerte');

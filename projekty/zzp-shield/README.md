@@ -16,9 +16,10 @@ projekty/zzp-shield/
 │   └── js/
 │       ├── app.js               # site renderer (config-driven)
 │       ├── i18n.js              # NL/PL/EN translations + formatters
-│       ├── offerte.js           # engine + auto-split + dupochron storage
-│       ├── panel.js             # ZZP'er dashboard (login, list, builder)
-│       ├── dupochron.js         # client acceptance page logic
+│       ├── offerte.js           # engine + auto-split + meerwerk
+│       ├── panel.js             # ZZP'er dashboard (login, list, builder, lifecycle, timeline)
+│       ├── dupochron.js         # client acceptance — terms in all 3 languages
+│       ├── oplevering.js        # completion report engine
 │       ├── gallery.js           # lightbox
 │       └── contact.js           # form + drag-drop photo upload
 ├── clients/
@@ -27,6 +28,7 @@ projekty/zzp-shield/
 │       ├── index.html           # public site
 │       ├── panel.html           # ZZP'er dashboard
 │       ├── offerte-view.html    # client-facing quote view + dupochron
+│       ├── oplevering-view.html # client-facing completion report
 │       └── assets/
 │           ├── logo.png         # (placeholder until Piotr supplies)
 │           └── gallery/         # project photos
@@ -92,8 +94,8 @@ client HTML references `./css/`, `./js/`, `./config/` and `./assets/` as flat pa
 ### Dupochron — client acceptance (`offerte-view.html` + `dupochron.js`)
 - The client opens the URL → sees the full offerte rendered in their language.
 - Below the offerte: a "Voorwaarden & acceptatie" card with:
-  - The full Algemene Voorwaarden (scrollable, from `config.legal.terms`)
-  - Required checkbox ("I have read and understood")
+  - The full Algemene Voorwaarden **in all 3 languages as tabs** (NL / PL / EN) — the client's language tab is selected by default but they can switch to any other language.
+  - Required checkbox ("I have read and understood") with a hint that the terms are available in all three languages
   - Three buttons — all disabled until the checkbox is ticked:
     - **Akkoord** (green) → status `accepted`, auto-splits into 2 invoices
     - **Overleggen** (orange) → asks for a note → status `discuss`
@@ -108,6 +110,56 @@ client HTML references `./css/`, `./js/`, `./config/` and `./assets/` as flat pa
 - **v1 limitation**: storage is `localStorage`, so the dupochron link works
   on the same device that created the offerte. Production deployment for
   cross-device acceptance requires the v2 Supabase backend.
+
+### Lifecycle on accepted offertes (Phase 2)
+
+Once an offerte is accepted (via dupochron or manual status change), the builder shows three extra action buttons + a Timeline panel:
+
+#### Beginsituatie — "Initial state" photo log
+- Owner arrives on site, opens the offerte → clicks **Beginsituatie**
+- Drag-drop or camera-capture photos of the existing situation (each photo can get a description)
+- General notes textarea for site-wide remarks
+- Photos are stored on the offerte under `beginsituatie.photos[]` with timestamps
+- These photos appear later in the oplevering view as the "BEFORE" set so the client can compare
+
+#### Meerwerk — additional-work invoice
+- Click **Meerwerk** on an accepted offerte → instantly creates `FAC-YYYY-NNN` with `invoicePhase: "meerwerk"` and `sourceOfferteId` pointing back to the offerte
+- Opens the same builder, owner fills in extra rows, saves — appears in the facturen list
+
+#### Oplevering — completion report
+- Click **Oplevering** → photo capture screen (camera + drag-drop) + general notes textarea
+- **Open client link** previews what the client will see (`oplevering-view.html?id=…`)
+- **Verstuur naar klant** marks the report `sent` (records `sent_at`) and opens the link to copy-share
+- Client opens link → sees **BEFORE** photos (from beginsituatie) and **AFTER** photos side-by-side, plus owner notes
+- Required checkbox, then three buttons (just like dupochron):
+  - **Goedgekeurd** (green) → status `approved`, **auto-activates the restant invoice** (status `open`, date reset to today so the 14-day payment clock starts from completion)
+  - **Opmerkingen** (orange) → captures a textarea note, status `remarks`
+  - **Afgekeurd** (red) → captures a note, status `rejected`
+- Full timestamp chain on `oplevering`: `sent_at` / `opened_at` / `checkbox_at` / `decision_at` / `decision` / `decision_note` / `user_agent`
+- Photos are resized client-side to a max dimension (config `legal.photo_max_dimension_px`) before being stored as data URLs, to keep localStorage usable
+
+#### Timeline panel
+A condensed lifecycle view on top of the builder, combining: offerte creation → client opened → accepted → voorschot invoice (with status + amount) → beginsituatie → any meerwerk invoices → oplevering sent/decision → eindfactuur (with status + amount). Status colors reflect paid/open/overdue.
+
+## All hardcoded values come from config
+
+Every behavioural value comes from `config.json.legal`, never from JS:
+
+```json
+{
+  "btw_percentage": 21,
+  "payment_terms_days": 14,
+  "offerte_valid_days": 30,
+  "voorschot_arbeid_percentage": 20,
+  "oplevering_response_days": 5,
+  "warranty_months": 6,
+  "incasso_minimum": 40,
+  "incasso_percentage": 15,
+  "photo_max_dimension_px": 1280
+}
+```
+
+A next ZZP client can use 30% advance, 7-day payment, 12-month warranty, or skip BTW entirely — just edit their `config.json`.
 
 ## Storage shape (v1: localStorage)
 

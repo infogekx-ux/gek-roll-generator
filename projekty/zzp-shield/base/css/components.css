@@ -809,6 +809,55 @@
   margin-bottom: 24px;
 }
 
+/* Multilingual terms tabs */
+.terms-tabs { margin: 24px 0; }
+
+.terms-tab-buttons {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.terms-tab {
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+}
+
+.terms-tab:hover { color: var(--text); }
+.terms-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.terms-content {
+  display: none;
+  padding: 20px 16px;
+  background: var(--card-bg);
+  border-radius: 0 0 var(--radius) var(--radius);
+  white-space: pre-line;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-top: none;
+}
+
+.terms-content.active { display: block; }
+
+.terms-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 4px;
+}
+
 .terms-checkbox {
   display: flex;
   gap: 12px;
@@ -882,6 +931,158 @@
   font-size: 0.95rem;
   min-height: 100px;
   resize: vertical;
+}
+
+/* ===========================
+   LIFECYCLE / PHOTO GRID / TIMELINE
+   =========================== */
+
+.lifecycle-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.lifecycle-actions .btn { flex: 1; min-width: 160px; }
+
+.lifecycle-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--card-bg);
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-left: 6px;
+}
+
+.lifecycle-badge svg { width: 12px; height: 12px; }
+.lifecycle-badge.has-data { background: var(--accent-light); color: var(--accent-dark); }
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.photo-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+.photo-card-img {
+  aspect-ratio: 4/3;
+  background: #E5E5E5;
+  overflow: hidden;
+  position: relative;
+}
+
+.photo-card-img img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+
+.photo-card-img .photo-remove {
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+}
+
+.photo-card-body { padding: 10px; }
+
+.photo-card-body input {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #FFFFFF;
+}
+
+.photo-card-time {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.dropzone-large {
+  margin-top: 16px;
+  padding: 40px 24px;
+}
+
+.section-divider {
+  margin: 32px 0 16px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Timeline */
+.timeline {
+  position: relative;
+  padding-left: 32px;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--border);
+}
+
+.timeline-item {
+  position: relative;
+  padding: 12px 0 12px 0;
+  font-size: 0.92rem;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -26px;
+  top: 16px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid #FFFFFF;
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.timeline-item.done::before { background: var(--success); }
+.timeline-item.pending::before { background: var(--border); }
+.timeline-item.warning::before { background: var(--warning); }
+.timeline-item.danger::before { background: var(--danger); }
+
+.timeline-label { font-weight: 600; color: var(--text); }
+.timeline-meta { color: var(--text-muted); font-size: 0.82rem; margin-top: 2px; }
+
+.timeline-amount {
+  float: right;
+  font-weight: 700;
+  font-family: var(--font-heading);
+  color: var(--accent);
 }
 
 @media print {

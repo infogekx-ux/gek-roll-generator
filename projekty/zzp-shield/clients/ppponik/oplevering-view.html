@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Oplevering / Odbiór / Completion</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="./css/base.css">
+  <link rel="stylesheet" href="./css/components.css">
+
+  <style>
+    body { background: #F4F4F4; padding: 0; }
+    .oplevering-doc {
+      background: #FFFFFF;
+      max-width: 800px;
+      margin: 32px auto;
+      padding: 40px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      border-radius: var(--radius);
+    }
+    .oplevering-doc h1 {
+      font-size: 1.75rem;
+      margin-bottom: 4px;
+      color: var(--accent);
+    }
+    .oplevering-doc .subtitle {
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+    .oplevering-section { margin-bottom: 32px; }
+    .oplevering-photo {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .oplevering-photo img { width: 100%; aspect-ratio: 4/3; object-fit: cover; cursor: pointer; }
+    .oplevering-photo .desc { padding: 10px 12px; font-size: 0.9rem; color: var(--text-muted); }
+    .photos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .ow-notes {
+      background: var(--card-bg);
+      padding: 16px;
+      border-radius: var(--radius);
+      white-space: pre-line;
+      font-size: 0.95rem;
+    }
+    @media (max-width: 600px) {
+      .oplevering-doc { padding: 20px; margin: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <p style="text-align:center;padding:48px;">Laden...</p>
+  </div>
+
+  <div id="dupochron-root"></div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="./js/i18n.js"></script>
+  <script src="./js/offerte.js"></script>
+  <script src="./js/oplevering.js"></script>
+  <script src="./js/gallery.js"></script>
+  <script>
+    (async function() {
+      try {
+        const res = await fetch('./config/config.json');
+        const config = await res.json();
+        window.AppConfig = config;
+        I18n.init(config);
+        Offerte.init(config);
+        Oplevering.init(config);
+
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id');
+        if (!id) { document.getElementById('root').innerHTML = '<p style="text-align:center;padding:48px;">Geen ID opgegeven.</p>'; return; }
+
+        const doc = Storage.getById(id, 'offerte');
+        if (!doc) { document.getElementById('root').innerHTML = `<p style="text-align:center;padding:48px;">Document ${id} niet gevonden.</p>`; return; }
+        if (!doc.oplevering) { document.getElementById('root').innerHTML = '<p style="text-align:center;padding:48px;">Geen oplevering voor deze offerte.</p>'; return; }
+
+        const lang = doc.client?.language || 'nl';
+        I18n.setLang(lang);
+
+        // Branding from config
+        const b = config.branding || {};
+        const rs = document.documentElement.style;
+        if (b.accentColor) rs.setProperty('--accent', b.accentColor);
+        if (b.accentColorLight) rs.setProperty('--accent-light', b.accentColorLight);
+        if (b.fontHeading) rs.setProperty('--font-heading', `'${b.fontHeading}', sans-serif`);
+        if (b.fontBody) rs.setProperty('--font-body', `'${b.fontBody}', sans-serif`);
+
+        document.documentElement.lang = lang;
+        document.title = `${I18n.t('oplevering_title')} ${doc.id} — ${config.company.name}`;
+
+        // Mark opened
+        Oplevering.markOpened(id);
+
+        renderDoc(doc, config, lang);
+        if (!doc.oplevering.decision) {
+          renderDupochron(doc, config, lang);
+        } else {
+          renderResult(doc.oplevering.decision, lang);
+        }
+        if (window.lucide) window.lucide.createIcons();
+      } catch (e) {
+        console.error(e);
+        document.getElementById('root').innerHTML = '<p style="text-align:center;padding:48px;">Er ging iets mis.</p>';
+      }
+    })();
+
+    function renderDoc(doc, config, lang) {
+      const c = config.company;
+      const op = doc.oplevering;
+      const beforePhotos = doc.beginsituatie?.photos || [];
+      const afterPhotos = op.photos || [];
+
+      const renderPhotos = (photos) => photos.length === 0
+        ? `<p style="color:#999;">—</p>`
+        : `<div class="photos-grid">${photos.map((p, i) => `
+            <div class="oplevering-photo">
+              <img src="${p.dataUrl}" alt="${p.filename || ''}" data-fullsize="${i}">
+              ${p.description ? `<div class="desc">${escapeHtml(p.description)}</div>` : ''}
+            </div>
+          `).join('')}</div>`;
+
+      document.getElementById('root').innerHTML = `
+        <div class="oplevering-doc">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;border-bottom:3px solid var(--accent);padding-bottom:24px;">
+            <div>
+              <div style="font-family:var(--font-heading);font-weight:800;font-size:1.5rem;color:var(--accent);">${c.name}</div>
+              <div style="color:var(--text-muted);font-size:0.9rem;">${I18n.get(c.tagline, lang)}</div>
+              <div style="font-size:0.85rem;margin-top:8px;">${c.phone} | ${c.email}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-family:var(--font-heading);font-weight:800;font-size:1.5rem;">${I18n.t('oplevering_title')}</div>
+              <div style="color:var(--accent);font-weight:700;">${op.id}</div>
+              <div style="color:var(--text-muted);font-size:0.85rem;">${I18n.formatDate(op.date, lang)}</div>
+              <div style="color:var(--text-muted);font-size:0.8rem;margin-top:4px;">${I18n.t('offerte_title')}: ${doc.id}</div>
+            </div>
+          </div>
+
+          <h1>${I18n.t('oplevering_before')}</h1>
+          <div class="oplevering-section">
+            ${beforePhotos.length === 0
+              ? `<p style="color:#999;">${I18n.t('oplevering_no_before')}</p>`
+              : renderPhotos(beforePhotos)}
+          </div>
+
+          <h1>${I18n.t('oplevering_after')}</h1>
+          <div class="oplevering-section">
+            ${renderPhotos(afterPhotos)}
+          </div>
+
+          ${op.notes ? `
+            <h1>${I18n.t('oplevering_notes')}</h1>
+            <div class="oplevering-section">
+              <div class="ow-notes">${escapeHtml(op.notes)}</div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+
+      // Lightbox bindings
+      const allPhotos = [...beforePhotos, ...afterPhotos].map(p => p.dataUrl);
+      window.GALLERY_IMAGES = allPhotos;
+      if (window.Gallery) Gallery.init(allPhotos);
+      document.querySelectorAll('.oplevering-photo img').forEach((img, idx) => {
+        img.classList.add('gallery-item');
+        img.dataset.index = idx;
+      });
+      // Re-wrap as gallery-item for click handler — simpler: wire direct click
+      document.querySelectorAll('.oplevering-photo img').forEach((img, idx) => {
+        img.style.cursor = 'pointer';
+        img.addEventListener('click', () => Gallery.open(idx));
+      });
+    }
+
+    function renderDupochron(doc, config, lang) {
+      const t = (k) => I18n.tFor(lang, k);
+      const root = document.getElementById('dupochron-root');
+
+      root.innerHTML = `
+        <div class="dupochron">
+          <div class="dupochron-card">
+            <h2>${t('oplevering_title')}</h2>
+            <p class="subtitle">${t('oplevering_subtitle')}</p>
+
+            <label class="terms-checkbox">
+              <input type="checkbox" id="op-checkbox">
+              <span>
+                <label for="op-checkbox" style="cursor:pointer;">${t('oplevering_checkbox')}</label>
+              </span>
+            </label>
+
+            <div class="dupochron-actions">
+              <button class="btn btn-success" id="op-approve" disabled>
+                <i data-lucide="check"></i>
+                ${t('oplevering_approve')}
+              </button>
+              <button class="btn btn-warning" id="op-remarks" disabled>
+                <i data-lucide="message-circle"></i>
+                ${t('oplevering_remarks')}
+              </button>
+              <button class="btn btn-danger" id="op-reject" disabled>
+                <i data-lucide="x"></i>
+                ${t('oplevering_reject')}
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const cb = document.getElementById('op-checkbox');
+      const approve = document.getElementById('op-approve');
+      const remarks = document.getElementById('op-remarks');
+      const reject = document.getElementById('op-reject');
+
+      cb.addEventListener('change', () => {
+        const en = cb.checked;
+        [approve, remarks, reject].forEach(b => { b.disabled = !en; });
+        if (en) Oplevering.markCheckbox(doc.id);
+      });
+
+      approve.addEventListener('click', () => handleDecision(doc, 'approved', null, lang));
+      remarks.addEventListener('click', () => askNote(doc, 'remarks', lang));
+      reject.addEventListener('click', () => askNote(doc, 'rejected', lang));
+
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    function askNote(doc, decision, lang) {
+      const t = (k) => I18n.tFor(lang, k);
+      const promptKey = decision === 'remarks' ? 'oplevering_remarks_prompt' : 'oplevering_reject_prompt';
+      const root = document.getElementById('dupochron-root');
+
+      root.innerHTML = `
+        <div class="dupochron">
+          <div class="dupochron-card">
+            <h2>${t('oplevering_title')}</h2>
+            <p class="subtitle">${t(promptKey)}</p>
+            <div class="dupochron-note">
+              <textarea id="op-note" placeholder="${t(promptKey)}"></textarea>
+            </div>
+            <div class="dupochron-actions" style="grid-template-columns: 1fr 1fr; margin-top: 16px;">
+              <button class="btn btn-secondary" id="op-cancel">${t('builder_back')}</button>
+              <button class="btn ${decision === 'remarks' ? 'btn-warning' : 'btn-danger'}" id="op-confirm">${t('dupochron_send_note')}</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById('op-cancel').addEventListener('click', () => renderDupochron(doc, window.AppConfig, lang));
+      document.getElementById('op-confirm').addEventListener('click', () => {
+        const note = document.getElementById('op-note').value.trim();
+        handleDecision(doc, decision, note, lang);
+      });
+    }
+
+    function handleDecision(doc, decision, note, lang) {
+      Oplevering.markDecision(doc.id, decision, note);
+      renderResult(decision, lang);
+    }
+
+    function renderResult(decision, lang) {
+      const t = (k) => I18n.tFor(lang, k);
+      let icon, cls, title, msg;
+      if (decision === 'approved') {
+        icon = 'check'; cls = 'success';
+        title = t('oplevering_approved_title'); msg = t('oplevering_approved_msg');
+      } else if (decision === 'remarks') {
+        icon = 'message-circle'; cls = 'warning';
+        title = t('oplevering_remarks_title'); msg = t('oplevering_remarks_msg');
+      } else {
+        icon = 'x'; cls = 'danger';
+        title = t('oplevering_rejected_title'); msg = t('oplevering_rejected_msg');
+      }
+      document.getElementById('dupochron-root').innerHTML = `
+        <div class="dupochron">
+          <div class="dupochron-card">
+            <div class="dupochron-result">
+              <div class="dupochron-result-icon ${cls}"><i data-lucide="${icon}"></i></div>
+              <h2>${title}</h2>
+              <p>${msg}</p>
+            </div>
+          </div>
+        </div>
+      `;
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    function escapeHtml(str) {
+      if (str == null) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>

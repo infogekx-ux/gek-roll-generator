@@ -261,6 +261,11 @@
     "payment_terms_days": 14,
     "offerte_valid_days": 30,
     "voorschot_arbeid_percentage": 20,
+    "oplevering_response_days": 5,
+    "warranty_months": 6,
+    "incasso_minimum": 40,
+    "incasso_percentage": 15,
+    "photo_max_dimension_px": 1280,
     "terms": {
       "nl": "Op al onze offertes en overeenkomsten zijn de volgende voorwaarden van toepassing:\n\n1. Voorschot: Materiaalkosten worden volledig vooraf gefactureerd, samen met 20% van de arbeidskosten als borg. Werkzaamheden starten na ontvangst van het voorschot.\n2. Restant: Het resterende bedrag (80% arbeidskosten) wordt gefactureerd na oplevering, met een betalingstermijn van 14 dagen.\n3. Wijzigingen: Wijzigingen in de opdracht dienen schriftelijk te worden overeengekomen.\n4. Annulering: Bij annulering na aankoop van materialen worden de materiaalkosten in rekening gebracht.",
       "pl": "Do wszystkich ofert i umów mają zastosowanie następujące warunki:\n\n1. Przedpłata: Koszty materiałów są fakturowane w całości z góry, wraz z 20% kosztów robocizny jako zabezpieczenie. Prace rozpoczynają się po otrzymaniu przedpłaty.\n2. Reszta: Pozostała kwota (80% robocizny) jest fakturowana po zakończeniu prac, z terminem płatności 14 dni.\n3. Zmiany: Zmiany w zamówieniu muszą być uzgodnione pisemnie.\n4. Anulowanie: W przypadku anulowania po zakupie materiałów, koszty materiałów zostaną naliczone.",

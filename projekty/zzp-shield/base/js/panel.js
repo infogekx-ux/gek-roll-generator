@@ -1,10 +1,10 @@
-// panel.js - ZZP'er dashboard (login, list, builder)
-// ZZP'er always works in their own language (config.languages.ownerLanguage)
-// On "Splits in facturen": auto-generates 2 invoices (voorschot + restant)
+// panel.js - ZZP'er dashboard
+// Views: list | builder | beginsituatie | oplevering
+// Owner works in own language. On accepted offerte: lifecycle actions (Beginsituatie / Meerwerk / Oplevering) + timeline.
 
 const Panel = {
   config: null,
-  view: 'list',
+  view: 'list',           // 'list' | 'builder' | 'beginsituatie' | 'oplevering'
   listType: 'offerte',
   currentDoc: null,
 
@@ -20,6 +20,7 @@ const Panel = {
 
     I18n.init(this.config);
     Offerte.init(this.config);
+    if (window.Oplevering) Oplevering.init(this.config);
 
     const ownerLang = this.config.languages.ownerLanguage || this.config.languages.default;
     I18n.setLang(ownerLang);
@@ -36,6 +37,13 @@ const Panel = {
     if (b.fontHeading) root.setProperty('--font-heading', `'${b.fontHeading}', sans-serif`);
     if (b.fontBody) root.setProperty('--font-body', `'${b.fontBody}', sans-serif`);
     document.title = `${this.config.company.name} — Panel`;
+  },
+
+  logoMarkup() {
+    const name = this.config.company.name;
+    const parts = name.split('.');
+    if (parts.length > 1) return `<span class="logo-accent">${parts[0]}</span>.${parts.slice(1).join('.')}`;
+    return `<span class="logo-accent">${name}</span>`;
   },
 
   checkLogin() {
@@ -79,15 +87,6 @@ const Panel = {
     });
   },
 
-  logoMarkup() {
-    const name = this.config.company.name;
-    const parts = name.split('.');
-    if (parts.length > 1) {
-      return `<span class="logo-accent">${parts[0]}</span>.${parts.slice(1).join('.')}`;
-    }
-    return `<span class="logo-accent">${name}</span>`;
-  },
-
   renderPanel() {
     document.body.className = 'panel-body';
     document.body.innerHTML = `
@@ -112,7 +111,7 @@ const Panel = {
     });
 
     this.renderList();
-    if (window.lucide) window.lucide.createIcons();
+    this.refreshIcons();
   },
 
   handleNav(btn) {
@@ -152,12 +151,18 @@ const Panel = {
     main.querySelectorAll('[data-open-id]').forEach(el => {
       el.addEventListener('click', () => this.openBuilder(el.dataset.openId));
     });
-    if (window.lucide) window.lucide.createIcons();
+    this.refreshIcons();
   },
 
   docCard(doc) {
     const totals = Offerte.totals(doc);
     const phaseBadge = doc.invoicePhase ? `<span class="phase-badge">${I18n.t('phase_' + doc.invoicePhase)}</span>` : '';
+    const extras = [];
+    if (doc.type === 'offerte') {
+      if (doc.beginsituatie?.photos?.length) extras.push(`📷 ${doc.beginsituatie.photos.length}`);
+      if (doc.oplevering) extras.push(`📋 ${doc.oplevering.status || 'concept'}`);
+    }
+    const extrasHtml = extras.length ? `<div style="margin-top:6px;font-size:0.8rem;color:var(--text-muted);">${extras.join(' · ')}</div>` : '';
     return `
       <div class="doc-card" data-open-id="${doc.id}">
         <div class="doc-card-header">
@@ -169,6 +174,7 @@ const Panel = {
         </div>
         <div>${Offerte.escapeHtml(doc.client?.name || '—')}</div>
         <div class="doc-card-total">${I18n.formatPrice(totals.total)}</div>
+        ${extrasHtml}
       </div>
     `;
   },
@@ -176,7 +182,14 @@ const Panel = {
   openBuilder(id) {
     this.view = 'builder';
     if (id) {
-      this.currentDoc = JSON.parse(JSON.stringify(Storage.getById(id, this.listType)));
+      // Could be either an offerte or a factuur — try the current listType first
+      let found = Storage.getById(id, this.listType);
+      if (!found) {
+        const other = this.listType === 'offerte' ? 'factuur' : 'offerte';
+        found = Storage.getById(id, other);
+        if (found) this.listType = other;
+      }
+      this.currentDoc = JSON.parse(JSON.stringify(found));
     } else {
       this.currentDoc = Offerte.createEmpty(this.listType);
     }
@@ -189,6 +202,7 @@ const Panel = {
     const langs = this.config.languages.available;
     const isOfferte = doc.type === 'offerte';
     const phaseBadge = doc.invoicePhase ? `<span class="phase-badge" style="margin-left:8px;">${I18n.t('phase_' + doc.invoicePhase)}</span>` : '';
+    const isAccepted = isOfferte && (doc.status === 'accepted' || doc.dupochron?.decision === 'accepted');
 
     main.innerHTML = `
       <div class="panel-header">
@@ -202,10 +216,13 @@ const Panel = {
               `<option value="${s}" ${doc.status === s ? 'selected' : ''}>${I18n.t('status_' + s)}</option>`
             ).join('')}
           </select>
-          ${isOfferte ? `<button class="btn btn-warning btn-sm" id="btn-split"><i data-lucide="split"></i> ${I18n.t('builder_split')}</button>` : ''}
+          ${isOfferte && !isAccepted ? `<button class="btn btn-warning btn-sm" id="btn-split"><i data-lucide="split"></i> ${I18n.t('builder_split')}</button>` : ''}
           <button class="btn btn-secondary btn-sm" id="btn-delete" style="color:#C82333;border-color:#C82333;"><i data-lucide="trash-2"></i></button>
         </div>
       </div>
+
+      ${isAccepted ? this.renderLifecycleCard(doc) : ''}
+      ${isAccepted ? this.renderTimelineCard(doc) : ''}
 
       <div class="builder-card">
         <h2>${I18n.t('builder_client')}</h2>
@@ -254,7 +271,7 @@ const Panel = {
           <button class="btn btn-secondary btn-sm" id="add-custom-btn"><i data-lucide="plus"></i> ${I18n.t('builder_add_custom')}</button>
         </div>
         <div class="totals-box" id="totals-box"></div>
-        ${isOfferte ? `<div class="split-preview" id="split-preview"></div>` : ''}
+        ${isOfferte && !isAccepted ? `<div class="split-preview" id="split-preview"></div>` : ''}
       </div>
 
       <div class="builder-card">
@@ -286,7 +303,130 @@ const Panel = {
     this.bindBuilder();
     this.renderItems();
     this.updateTotals();
-    if (window.lucide) window.lucide.createIcons();
+    this.refreshIcons();
+  },
+
+  renderLifecycleCard(doc) {
+    const hasBegin = doc.beginsituatie?.photos?.length > 0;
+    const hasOplevering = !!doc.oplevering;
+    const beginBadge = hasBegin
+      ? `<span class="lifecycle-badge has-data"><i data-lucide="check"></i> ${doc.beginsituatie.photos.length} ${I18n.t('beginsituatie_photos')}</span>`
+      : '';
+    const opleveringBadge = hasOplevering
+      ? `<span class="lifecycle-badge has-data"><i data-lucide="check"></i> ${doc.oplevering.status || 'concept'}</span>`
+      : '';
+    return `
+      <div class="builder-card">
+        <h2>${I18n.t('timeline_title')}: ${I18n.t('builder_items')}</h2>
+        <div class="lifecycle-actions">
+          <button class="btn btn-secondary" id="btn-beginsituatie">
+            <i data-lucide="camera"></i> ${I18n.t('beginsituatie_btn')} ${beginBadge}
+          </button>
+          <button class="btn btn-secondary" id="btn-meerwerk">
+            <i data-lucide="plus-circle"></i> ${I18n.t('meerwerk_btn')}
+          </button>
+          <button class="btn btn-primary" id="btn-oplevering">
+            <i data-lucide="clipboard-check"></i> ${I18n.t('oplevering_btn')} ${opleveringBadge}
+          </button>
+        </div>
+      </div>
+    `;
+  },
+
+  renderTimelineCard(doc) {
+    const events = this.buildTimeline(doc);
+    return `
+      <div class="builder-card">
+        <h2><i data-lucide="git-commit-horizontal" style="display:inline-block;vertical-align:middle;"></i> ${I18n.t('timeline_title')}</h2>
+        <div class="timeline">
+          ${events.map(ev => `
+            <div class="timeline-item ${ev.cls || ''}">
+              <div class="timeline-label">${ev.label} ${ev.amount ? `<span class="timeline-amount">${ev.amount}</span>` : ''}</div>
+              ${ev.meta ? `<div class="timeline-meta">${ev.meta}</div>` : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  },
+
+  buildTimeline(doc) {
+    const events = [];
+    const fmt = (iso) => iso ? new Date(iso).toLocaleString() : '';
+
+    events.push({
+      label: I18n.t('timeline_created'),
+      meta: I18n.formatDate(doc.date),
+      cls: 'done'
+    });
+
+    if (doc.dupochron?.opened_at) {
+      events.push({ label: I18n.t('timeline_opened'), meta: fmt(doc.dupochron.opened_at), cls: 'done' });
+    }
+    if (doc.dupochron?.decision === 'accepted') {
+      events.push({ label: I18n.t('timeline_accepted'), meta: fmt(doc.dupochron.decision_at), cls: 'done' });
+    } else if (doc.dupochron?.decision === 'discuss') {
+      events.push({ label: I18n.t('timeline_discuss'), meta: fmt(doc.dupochron.decision_at), cls: 'warning' });
+    } else if (doc.dupochron?.decision === 'rejected') {
+      events.push({ label: I18n.t('timeline_rejected'), meta: fmt(doc.dupochron.decision_at), cls: 'danger' });
+    }
+
+    const linked = Offerte.linkedInvoices(doc.id);
+    const voorschot = linked.find(f => f.invoicePhase === 'voorschot');
+    const restant = linked.find(f => f.invoicePhase === 'restant');
+    const meerwerken = linked.filter(f => f.invoicePhase === 'meerwerk');
+
+    if (voorschot) {
+      const total = I18n.formatPrice(Offerte.totals(voorschot).total);
+      const cls = voorschot.status === 'paid' ? 'done' : voorschot.status === 'overdue' ? 'danger' : 'pending';
+      events.push({
+        label: `${I18n.t('timeline_voorschot')} ${voorschot.id}`,
+        meta: I18n.t('status_' + voorschot.status),
+        amount: total,
+        cls
+      });
+    }
+
+    if (doc.beginsituatie?.recorded_at) {
+      events.push({
+        label: I18n.t('timeline_beginsituatie'),
+        meta: `${fmt(doc.beginsituatie.recorded_at)} · ${doc.beginsituatie.photos.length} ${I18n.t('beginsituatie_photos')}`,
+        cls: 'done'
+      });
+    }
+
+    meerwerken.forEach(mw => {
+      const cls = mw.status === 'paid' ? 'done' : mw.status === 'overdue' ? 'danger' : 'pending';
+      events.push({
+        label: `${I18n.t('timeline_meerwerk')} ${mw.id}`,
+        meta: I18n.t('status_' + mw.status),
+        amount: I18n.formatPrice(Offerte.totals(mw).total),
+        cls
+      });
+    });
+
+    if (doc.oplevering?.sent_at) {
+      events.push({ label: I18n.t('timeline_oplevering_sent'), meta: fmt(doc.oplevering.sent_at), cls: 'done' });
+    }
+    if (doc.oplevering?.decision === 'approved') {
+      events.push({ label: I18n.t('timeline_oplevering_approved'), meta: fmt(doc.oplevering.decision_at), cls: 'done' });
+    } else if (doc.oplevering?.decision === 'remarks') {
+      events.push({ label: I18n.t('timeline_oplevering_remarks'), meta: `${fmt(doc.oplevering.decision_at)}${doc.oplevering.decision_note ? ' · "' + Offerte.escapeHtml(doc.oplevering.decision_note) + '"' : ''}`, cls: 'warning' });
+    } else if (doc.oplevering?.decision === 'rejected') {
+      events.push({ label: I18n.t('timeline_oplevering_rejected'), meta: fmt(doc.oplevering.decision_at), cls: 'danger' });
+    }
+
+    if (restant) {
+      const cls = restant.status === 'paid' ? 'done' : restant.status === 'overdue' ? 'danger' : restant.status === 'open' ? 'warning' : 'pending';
+      events.push({
+        label: `${I18n.t('timeline_eindfactuur')} ${restant.id}`,
+        meta: I18n.t('status_' + restant.status),
+        amount: I18n.formatPrice(Offerte.totals(restant).total),
+        cls
+      });
+    }
+
+    return events;
   },
 
   renderDupochronInfo(doc) {
@@ -296,9 +436,9 @@ const Panel = {
       const d = doc.dupochron;
       dupochronDetails = `
         <div style="margin-top:16px;font-size:0.85rem;background:var(--card-bg);padding:12px;border-radius:6px;">
-          ${d.opened_at ? `<div>📂 Geopend: ${new Date(d.opened_at).toLocaleString()}</div>` : ''}
-          ${d.checkbox_at ? `<div>☑ Akkoord voorwaarden: ${new Date(d.checkbox_at).toLocaleString()}</div>` : ''}
-          ${d.decision_at ? `<div>✓ Beslissing (${d.decision}): ${new Date(d.decision_at).toLocaleString()}</div>` : ''}
+          ${d.opened_at ? `<div>📂 ${I18n.t('timeline_opened')}: ${new Date(d.opened_at).toLocaleString()}</div>` : ''}
+          ${d.checkbox_at ? `<div>☑ ${I18n.t('dupochron_checkbox').slice(0, 30)}...: ${new Date(d.checkbox_at).toLocaleString()}</div>` : ''}
+          ${d.decision_at ? `<div>✓ ${d.decision}: ${new Date(d.decision_at).toLocaleString()}</div>` : ''}
           ${d.decision_note ? `<div style="margin-top:8px;"><em>"${Offerte.escapeHtml(d.decision_note)}"</em></div>` : ''}
         </div>
       `;
@@ -348,26 +488,7 @@ const Panel = {
 
     const splitBtn = document.getElementById('btn-split');
     if (splitBtn) {
-      splitBtn.addEventListener('click', () => {
-        this.syncFromForm();
-        if ((this.currentDoc.items || []).length === 0) {
-          alert('Voeg eerst regels toe.');
-          return;
-        }
-        Storage.upsert(this.currentDoc, this.currentDoc.type);
-        const { voorschot, restant } = Offerte.splitInvoice(this.currentDoc);
-        Storage.upsert(voorschot, 'factuur');
-        Storage.upsert(restant, 'factuur');
-        this.currentDoc.generatedInvoices = [voorschot.id, restant.id];
-        this.currentDoc.status = 'accepted';
-        Storage.upsert(this.currentDoc, 'offerte');
-        alert(`${I18n.t('builder_split_done')}\n\n${voorschot.id}: ${I18n.formatPrice(Offerte.totals(voorschot).total)}\n${restant.id}: ${I18n.formatPrice(Offerte.totals(restant).total)}`);
-        this.listType = 'factuur';
-        document.querySelectorAll('.panel-nav button').forEach(b => {
-          b.classList.toggle('active', b.dataset.tab === 'factuur');
-        });
-        this.renderList();
-      });
+      splitBtn.addEventListener('click', () => this.handleSplit());
     }
 
     document.getElementById('add-service-btn').addEventListener('click', () => this.addRow('service'));
@@ -380,17 +501,55 @@ const Panel = {
 
     const copyBtn = document.getElementById('btn-copy-link');
     if (copyBtn) {
-      copyBtn.addEventListener('click', () => {
-        const linkInput = document.getElementById('dupochron-link');
-        linkInput.select();
-        document.execCommand('copy');
-        copyBtn.innerHTML = `✓ ${I18n.t('builder_link_copied')}`;
-        setTimeout(() => {
-          copyBtn.innerHTML = `<i data-lucide="copy"></i> ${I18n.t('builder_copy_link')}`;
-          if (window.lucide) window.lucide.createIcons();
-        }, 2000);
-      });
+      copyBtn.addEventListener('click', () => this.handleCopyLink(copyBtn));
     }
+
+    // Lifecycle actions (only on accepted offertes)
+    const beginBtn = document.getElementById('btn-beginsituatie');
+    if (beginBtn) beginBtn.addEventListener('click', () => this.openBeginsituatie(this.currentDoc.id));
+    const meerwerkBtn = document.getElementById('btn-meerwerk');
+    if (meerwerkBtn) meerwerkBtn.addEventListener('click', () => this.handleMeerwerk());
+    const opleveringBtn = document.getElementById('btn-oplevering');
+    if (opleveringBtn) opleveringBtn.addEventListener('click', () => this.openOplevering(this.currentDoc.id));
+  },
+
+  handleSplit() {
+    this.syncFromForm();
+    if ((this.currentDoc.items || []).length === 0) {
+      alert('Voeg eerst regels toe.');
+      return;
+    }
+    Storage.upsert(this.currentDoc, this.currentDoc.type);
+    const { voorschot, restant } = Offerte.splitInvoice(this.currentDoc);
+    Storage.upsert(voorschot, 'factuur');
+    Storage.upsert(restant, 'factuur');
+    this.currentDoc.generatedInvoices = [voorschot.id, restant.id];
+    this.currentDoc.status = 'accepted';
+    Storage.upsert(this.currentDoc, 'offerte');
+    alert(`${I18n.t('builder_split_done')}\n\n${voorschot.id}: ${I18n.formatPrice(Offerte.totals(voorschot).total)}\n${restant.id}: ${I18n.formatPrice(Offerte.totals(restant).total)}`);
+    this.renderBuilder();
+  },
+
+  handleMeerwerk() {
+    this.syncFromForm();
+    Storage.upsert(this.currentDoc, 'offerte');
+    const mw = Offerte.createMeerwerk(this.currentDoc.id);
+    Storage.upsert(mw, 'factuur');
+    this.flashMessage('✓ ' + I18n.t('meerwerk_generated'));
+    this.listType = 'factuur';
+    this.currentDoc = mw;
+    this.renderBuilder();
+  },
+
+  handleCopyLink(copyBtn) {
+    const linkInput = document.getElementById('dupochron-link');
+    linkInput.select();
+    document.execCommand('copy');
+    copyBtn.innerHTML = `✓ ${I18n.t('builder_link_copied')}`;
+    setTimeout(() => {
+      copyBtn.innerHTML = `<i data-lucide="copy"></i> ${I18n.t('builder_copy_link')}`;
+      this.refreshIcons();
+    }, 2000);
   },
 
   flashMessage(msg) {
@@ -423,7 +582,7 @@ const Panel = {
       const first = this.config.materials[0];
       if (first) { item.refId = first.id; item.price = first.defaultPrice; }
     } else {
-      item.category = 'arbeid'; // default custom rows to arbeid
+      item.category = 'arbeid';
     }
     this.currentDoc.items.push(item);
     this.renderItems();
@@ -432,6 +591,7 @@ const Panel = {
 
   renderItems() {
     const body = document.getElementById('items-body');
+    if (!body) return;
     const ownerLang = I18n.currentLang;
     const items = this.currentDoc.items || [];
 
@@ -448,18 +608,14 @@ const Panel = {
       if (item.refType === 'service') {
         descCell = `
           <select data-idx="${idx}" data-field="refId">
-            ${this.config.services.map(s =>
-              `<option value="${s.id}" ${s.id === item.refId ? 'selected' : ''}>${I18n.get(s.name, ownerLang)}</option>`
-            ).join('')}
+            ${this.config.services.map(s => `<option value="${s.id}" ${s.id === item.refId ? 'selected' : ''}>${I18n.get(s.name, ownerLang)}</option>`).join('')}
           </select>
           ${catBadge}
         `;
       } else if (item.refType === 'material') {
         descCell = `
           <select data-idx="${idx}" data-field="refId">
-            ${this.config.materials.map(m =>
-              `<option value="${m.id}" ${m.id === item.refId ? 'selected' : ''}>${I18n.get(m.name, ownerLang)}</option>`
-            ).join('')}
+            ${this.config.materials.map(m => `<option value="${m.id}" ${m.id === item.refId ? 'selected' : ''}>${I18n.get(m.name, ownerLang)}</option>`).join('')}
           </select>
           ${catBadge}
         `;
@@ -560,8 +716,324 @@ const Panel = {
           <div><strong>${I18n.t('phase_restant')}:</strong> ${I18n.formatPrice(preview.restant.total)}<br><small>${100 - arbeidPct}% arbeid</small></div>
         </div>
       `;
-      if (window.lucide) window.lucide.createIcons();
+      this.refreshIcons();
     }
+  },
+
+  // =============================
+  // BEGINSITUATIE — photo capture before work starts
+  // =============================
+
+  openBeginsituatie(offerteId) {
+    const doc = Storage.getById(offerteId, 'offerte');
+    if (!doc.beginsituatie) {
+      doc.beginsituatie = {
+        date: new Date().toISOString().slice(0, 10),
+        photos: [],
+        notes: '',
+        recorded_at: null
+      };
+      Storage.upsert(doc, 'offerte');
+    }
+    this.currentDoc = doc;
+    this.view = 'beginsituatie';
+    this.renderBeginsituatie();
+  },
+
+  renderBeginsituatie() {
+    const doc = this.currentDoc;
+    const bs = doc.beginsituatie || { photos: [], notes: '' };
+    const main = document.getElementById('panel-main');
+
+    main.innerHTML = `
+      <div class="panel-header">
+        <div>
+          <button class="btn btn-secondary btn-sm" id="btn-back-builder"><i data-lucide="arrow-left"></i> ${doc.id}</button>
+          <h1 style="margin-top:8px;">${I18n.t('beginsituatie_title')}</h1>
+          <p style="color:var(--text-muted);margin-top:4px;">${I18n.t('beginsituatie_subtitle')}</p>
+        </div>
+        <div>
+          ${bs.recorded_at ? `<span class="status-badge status-paid">${I18n.t('beginsituatie_saved')}</span>` : ''}
+        </div>
+      </div>
+
+      <div class="builder-card">
+        <h2><i data-lucide="camera" style="display:inline-block;vertical-align:middle;"></i> ${I18n.t('beginsituatie_add')}</h2>
+        <label class="dropzone dropzone-large" id="bs-dropzone">
+          <i data-lucide="camera" style="width:40px;height:40px;"></i>
+          <p>${I18n.t('beginsituatie_drop_hint')}</p>
+          <input type="file" id="bs-input" accept="image/*" capture="environment" multiple>
+        </label>
+        <div class="photo-grid" id="bs-photos"></div>
+
+        <div class="form-group" style="margin-top:24px;">
+          <label>${I18n.t('beginsituatie_general_notes')}</label>
+          <textarea id="bs-notes" rows="3">${Offerte.escapeHtml(bs.notes || '')}</textarea>
+        </div>
+      </div>
+
+      <div class="builder-actions">
+        <button class="btn btn-primary" id="bs-save"><i data-lucide="save"></i> ${I18n.t('builder_save')}</button>
+      </div>
+    `;
+
+    this.bindBeginsituatie();
+    this.renderBsPhotos();
+    this.refreshIcons();
+  },
+
+  bindBeginsituatie() {
+    document.getElementById('btn-back-builder').addEventListener('click', () => {
+      this.view = 'builder';
+      this.renderBuilder();
+    });
+
+    const input = document.getElementById('bs-input');
+    const dz = document.getElementById('bs-dropzone');
+    input.addEventListener('change', (e) => this.handleBsFiles(e.target.files));
+    dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+    dz.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dz.classList.remove('dragover');
+      this.handleBsFiles(e.dataTransfer.files);
+    });
+
+    document.getElementById('bs-save').addEventListener('click', () => {
+      this.currentDoc.beginsituatie.notes = document.getElementById('bs-notes').value;
+      this.currentDoc.beginsituatie.recorded_at = this.currentDoc.beginsituatie.recorded_at || new Date().toISOString();
+      Storage.upsert(this.currentDoc, 'offerte');
+      this.flashMessage('✓ ' + I18n.t('beginsituatie_saved'));
+      this.renderBeginsituatie();
+    });
+  },
+
+  async handleBsFiles(fileList) {
+    for (const file of fileList) {
+      if (!file.type.startsWith('image/')) continue;
+      const dataUrl = await this.resizeImageToDataUrl(file);
+      this.currentDoc.beginsituatie.photos.push({
+        filename: file.name,
+        dataUrl,
+        description: '',
+        added_at: new Date().toISOString()
+      });
+    }
+    Storage.upsert(this.currentDoc, 'offerte');
+    this.renderBsPhotos();
+  },
+
+  renderBsPhotos() {
+    const container = document.getElementById('bs-photos');
+    if (!container) return;
+    const photos = this.currentDoc.beginsituatie?.photos || [];
+    if (photos.length === 0) { container.innerHTML = ''; return; }
+    container.innerHTML = photos.map((p, i) => `
+      <div class="photo-card">
+        <div class="photo-card-img">
+          <img src="${p.dataUrl}" alt="">
+          <button class="photo-remove" data-bs-remove="${i}" aria-label="Remove">×</button>
+        </div>
+        <div class="photo-card-body">
+          <input type="text" data-bs-desc="${i}" value="${Offerte.escapeHtml(p.description || '')}" placeholder="${I18n.t('beginsituatie_photo_description')}">
+          <div class="photo-card-time">${new Date(p.added_at).toLocaleString()}</div>
+        </div>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('[data-bs-remove]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const i = parseInt(btn.dataset.bsRemove, 10);
+        this.currentDoc.beginsituatie.photos.splice(i, 1);
+        Storage.upsert(this.currentDoc, 'offerte');
+        this.renderBsPhotos();
+      });
+    });
+    container.querySelectorAll('[data-bs-desc]').forEach(inp => {
+      inp.addEventListener('change', (e) => {
+        const i = parseInt(e.target.dataset.bsDesc, 10);
+        this.currentDoc.beginsituatie.photos[i].description = e.target.value;
+        Storage.upsert(this.currentDoc, 'offerte');
+      });
+    });
+  },
+
+  // =============================
+  // OPLEVERING — photo upload + send to client
+  // =============================
+
+  openOplevering(offerteId) {
+    Oplevering.ensure(offerteId);
+    this.currentDoc = Storage.getById(offerteId, 'offerte');
+    this.view = 'oplevering';
+    this.renderOplevering();
+  },
+
+  renderOplevering() {
+    const doc = this.currentDoc;
+    const op = doc.oplevering;
+    const main = document.getElementById('panel-main');
+
+    const sentBadge = op.sent_at ? `<span class="status-badge status-sent">${I18n.t('timeline_oplevering_sent')}: ${new Date(op.sent_at).toLocaleDateString()}</span>` : '';
+    const decisionBadge = op.decision ? `<span class="status-badge status-${op.decision}">${I18n.t('status_' + op.decision) || op.decision}</span>` : '';
+
+    main.innerHTML = `
+      <div class="panel-header">
+        <div>
+          <button class="btn btn-secondary btn-sm" id="btn-back-builder"><i data-lucide="arrow-left"></i> ${doc.id}</button>
+          <h1 style="margin-top:8px;">${I18n.t('oplevering_title')} — ${op.id}</h1>
+          <p style="color:var(--text-muted);margin-top:4px;">${I18n.t('oplevering_subtitle')}</p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          ${sentBadge}
+          ${decisionBadge}
+        </div>
+      </div>
+
+      <div class="builder-card">
+        <h2><i data-lucide="camera" style="display:inline-block;vertical-align:middle;"></i> ${I18n.t('oplevering_add_photo')}</h2>
+        <label class="dropzone dropzone-large" id="op-dropzone">
+          <i data-lucide="camera" style="width:40px;height:40px;"></i>
+          <p>${I18n.t('beginsituatie_drop_hint')}</p>
+          <input type="file" id="op-input" accept="image/*" capture="environment" multiple>
+        </label>
+        <div class="photo-grid" id="op-photos"></div>
+
+        <div class="form-group" style="margin-top:24px;">
+          <label>${I18n.t('oplevering_notes')}</label>
+          <textarea id="op-notes" rows="3">${Offerte.escapeHtml(op.notes || '')}</textarea>
+        </div>
+      </div>
+
+      ${op.decision_note ? `
+        <div class="builder-card">
+          <h2><i data-lucide="message-square" style="display:inline-block;vertical-align:middle;"></i> ${I18n.t('oplevering_notes')} (klant)</h2>
+          <p style="white-space:pre-line;">${Offerte.escapeHtml(op.decision_note)}</p>
+        </div>
+      ` : ''}
+
+      <div class="builder-actions">
+        <button class="btn btn-secondary" id="op-save"><i data-lucide="save"></i> ${I18n.t('builder_save')}</button>
+        <button class="btn btn-secondary" id="op-open-link"><i data-lucide="external-link"></i> ${I18n.t('oplevering_open_link')}</button>
+        <button class="btn btn-primary" id="op-send"><i data-lucide="send"></i> ${I18n.t('oplevering_send')}</button>
+      </div>
+    `;
+
+    this.bindOplevering();
+    this.renderOpPhotos();
+    this.refreshIcons();
+  },
+
+  bindOplevering() {
+    document.getElementById('btn-back-builder').addEventListener('click', () => {
+      this.view = 'builder';
+      this.renderBuilder();
+    });
+
+    const input = document.getElementById('op-input');
+    const dz = document.getElementById('op-dropzone');
+    input.addEventListener('change', (e) => this.handleOpFiles(e.target.files));
+    dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+    dz.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dz.classList.remove('dragover');
+      this.handleOpFiles(e.dataTransfer.files);
+    });
+
+    document.getElementById('op-save').addEventListener('click', () => {
+      Oplevering.updateNotes(this.currentDoc.id, document.getElementById('op-notes').value);
+      this.flashMessage('✓ ' + I18n.t('builder_save'));
+    });
+
+    document.getElementById('op-open-link').addEventListener('click', () => {
+      Oplevering.updateNotes(this.currentDoc.id, document.getElementById('op-notes').value);
+      const url = `./oplevering-view.html?id=${encodeURIComponent(this.currentDoc.id)}`;
+      window.open(url, '_blank');
+    });
+
+    document.getElementById('op-send').addEventListener('click', () => {
+      Oplevering.updateNotes(this.currentDoc.id, document.getElementById('op-notes').value);
+      Oplevering.send(this.currentDoc.id);
+      const url = `./oplevering-view.html?id=${encodeURIComponent(this.currentDoc.id)}`;
+      window.open(url, '_blank');
+      this.currentDoc = Storage.getById(this.currentDoc.id, 'offerte');
+      this.renderOplevering();
+    });
+  },
+
+  async handleOpFiles(fileList) {
+    for (const file of fileList) {
+      if (!file.type.startsWith('image/')) continue;
+      const dataUrl = await this.resizeImageToDataUrl(file);
+      Oplevering.addPhoto(this.currentDoc.id, dataUrl, file.name, '');
+    }
+    this.currentDoc = Storage.getById(this.currentDoc.id, 'offerte');
+    this.renderOpPhotos();
+  },
+
+  renderOpPhotos() {
+    const container = document.getElementById('op-photos');
+    if (!container) return;
+    const photos = this.currentDoc.oplevering?.photos || [];
+    if (photos.length === 0) { container.innerHTML = ''; return; }
+    container.innerHTML = photos.map((p, i) => `
+      <div class="photo-card">
+        <div class="photo-card-img">
+          <img src="${p.dataUrl}" alt="">
+          <button class="photo-remove" data-op-remove="${i}" aria-label="Remove">×</button>
+        </div>
+        <div class="photo-card-body">
+          <input type="text" data-op-desc="${i}" value="${Offerte.escapeHtml(p.description || '')}" placeholder="${I18n.t('beginsituatie_photo_description')}">
+          <div class="photo-card-time">${new Date(p.added_at).toLocaleString()}</div>
+        </div>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('[data-op-remove]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const i = parseInt(btn.dataset.opRemove, 10);
+        Oplevering.removePhoto(this.currentDoc.id, i);
+        this.currentDoc = Storage.getById(this.currentDoc.id, 'offerte');
+        this.renderOpPhotos();
+      });
+    });
+    container.querySelectorAll('[data-op-desc]').forEach(inp => {
+      inp.addEventListener('change', (e) => {
+        const i = parseInt(e.target.dataset.opDesc, 10);
+        Oplevering.updatePhotoDescription(this.currentDoc.id, i, e.target.value);
+      });
+    });
+  },
+
+  // Resize images client-side to keep localStorage usable (max dim from config)
+  resizeImageToDataUrl(file) {
+    return new Promise((resolve) => {
+      const maxDim = this.config.legal?.photo_max_dimension_px || 1280;
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = () => {
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            const ratio = Math.min(maxDim / width, maxDim / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  },
+
+  refreshIcons() {
+    if (window.lucide) window.lucide.createIcons();
   }
 };
 

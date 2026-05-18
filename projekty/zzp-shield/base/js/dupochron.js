@@ -1,5 +1,5 @@
 // dupochron.js - Client acceptance page
-// Renders terms + checkbox + 3 decision buttons (accept / discuss / reject)
+// Renders terms in ALL 3 languages (tabs) + checkbox + 3 decision buttons
 // Captures timestamp chain into offerte.dupochron
 // On accept: auto-splits into 2 invoices via Offerte.markDecision()
 
@@ -7,20 +7,14 @@ const Dupochron = {
   config: null,
   doc: null,
   lang: 'nl',
-  state: 'pending', // 'pending' | 'accepted' | 'discuss' | 'rejected'
+  state: 'pending',
 
   init(doc, config) {
     this.doc = doc;
     this.config = config;
     this.lang = doc.client?.language || config.languages.default || 'nl';
-
-    // Record opening timestamp (first time only)
     Offerte.markOpened(doc.id);
-
-    // If already decided, show the result state
-    if (doc.dupochron?.decision) {
-      this.state = doc.dupochron.decision;
-    }
+    if (doc.dupochron?.decision) this.state = doc.dupochron.decision;
   },
 
   render(rootEl) {
@@ -31,7 +25,19 @@ const Dupochron = {
     }
 
     const t = (k) => I18n.tFor(this.lang, k);
-    const termsText = I18n.get(this.config.legal?.terms || '', this.lang);
+    const terms = this.config.legal?.terms || {};
+    const langs = this.config.languages.available || ['nl', 'pl', 'en'];
+
+    const tabButtons = langs.map((l, i) => {
+      const isDefault = (l === this.lang) || (i === 0 && !langs.includes(this.lang));
+      const label = l === 'nl' ? 'Nederlands' : l === 'pl' ? 'Polski' : 'English';
+      return `<button class="terms-tab ${isDefault ? 'active' : ''}" data-lang="${l}">${FLAGS[l]} ${label}</button>`;
+    }).join('');
+
+    const tabContents = langs.map((l, i) => {
+      const isDefault = (l === this.lang) || (i === 0 && !langs.includes(this.lang));
+      return `<div class="terms-content ${isDefault ? 'active' : ''}" data-terms-lang="${l}">${Offerte.escapeHtml(terms[l] || '')}</div>`;
+    }).join('');
 
     rootEl.innerHTML = `
       <div class="dupochron">
@@ -39,11 +45,17 @@ const Dupochron = {
           <h2>${t('dupochron_heading')}</h2>
           <p class="subtitle">${t('dupochron_subtitle')}</p>
 
-          <div class="terms-box">${Offerte.escapeHtml(termsText)}</div>
+          <div class="terms-tabs">
+            <div class="terms-tab-buttons">${tabButtons}</div>
+            ${tabContents}
+          </div>
 
           <label class="terms-checkbox">
             <input type="checkbox" id="dupochron-checkbox">
-            <label for="dupochron-checkbox">${t('dupochron_checkbox')}</label>
+            <span>
+              <label for="dupochron-checkbox" style="cursor:pointer;">${t('dupochron_checkbox')}</label>
+              <div class="terms-hint">${t('dupochron_terms_hint')}</div>
+            </span>
           </label>
 
           <div class="dupochron-actions">
@@ -69,11 +81,19 @@ const Dupochron = {
   },
 
   bind(rootEl) {
+    // Terms tabs
+    rootEl.querySelectorAll('.terms-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const lang = btn.dataset.lang;
+        rootEl.querySelectorAll('.terms-tab').forEach(b => b.classList.toggle('active', b === btn));
+        rootEl.querySelectorAll('.terms-content').forEach(c => c.classList.toggle('active', c.dataset.termsLang === lang));
+      });
+    });
+
     const checkbox = rootEl.querySelector('#dupochron-checkbox');
     const acceptBtn = rootEl.querySelector('#dupochron-accept');
     const discussBtn = rootEl.querySelector('#dupochron-discuss');
     const rejectBtn = rootEl.querySelector('#dupochron-reject');
-
     if (!checkbox) return;
 
     checkbox.addEventListener('change', () => {
@@ -87,7 +107,6 @@ const Dupochron = {
     rejectBtn.addEventListener('click', () => this.askNote('rejected'));
   },
 
-  // For discuss/reject: show textarea inline, ask for note before committing
   askNote(decision) {
     const t = (k) => I18n.tFor(this.lang, k);
     const rootEl = document.getElementById('dupochron-root');
@@ -131,20 +150,14 @@ const Dupochron = {
     let icon, iconClass, title, msg;
 
     if (decision === 'accepted') {
-      icon = 'check';
-      iconClass = 'success';
-      title = t('dupochron_accept_title');
-      msg = t('dupochron_accept_msg');
+      icon = 'check'; iconClass = 'success';
+      title = t('dupochron_accept_title'); msg = t('dupochron_accept_msg');
     } else if (decision === 'discuss') {
-      icon = 'message-circle';
-      iconClass = 'warning';
-      title = t('dupochron_discuss_title');
-      msg = t('dupochron_discuss_msg');
+      icon = 'message-circle'; iconClass = 'warning';
+      title = t('dupochron_discuss_title'); msg = t('dupochron_discuss_msg');
     } else {
-      icon = 'x';
-      iconClass = 'danger';
-      title = t('dupochron_reject_title');
-      msg = t('dupochron_reject_msg');
+      icon = 'x'; iconClass = 'danger';
+      title = t('dupochron_reject_title'); msg = t('dupochron_reject_msg');
     }
 
     return `
@@ -162,9 +175,7 @@ const Dupochron = {
     `;
   },
 
-  refreshIcons() {
-    if (window.lucide) window.lucide.createIcons();
-  }
+  refreshIcons() { if (window.lucide) window.lucide.createIcons(); }
 };
 
 window.Dupochron = Dupochron;
