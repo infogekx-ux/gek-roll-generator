@@ -205,6 +205,19 @@ const UI_TRANSLATIONS = {
     social_generated_at: "Gegenereerd op",
     timeline_social: "Social content beschikbaar",
 
+    // Promo banner
+    promo_save: "Bespaar",
+    promo_interested_sent: "Bedankt! We nemen binnenkort contact met u op.",
+    promo_dismissed: "Verborgen",
+
+    // Email
+    email_send: "Verstuur per e-mail",
+    email_send_offerte: "Stuur offerte naar klant",
+    email_send_factuur: "Stuur factuur",
+    email_send_oplevering: "Stuur oplevering",
+    email_no_address: "Geen e-mailadres ingevuld bij klant.",
+    email_opened: "E-mail venster geopend",
+
     // Status (new)
     status_approved: "Goedgekeurd",
     status_remarks: "Opmerkingen",
@@ -427,6 +440,17 @@ const UI_TRANSLATIONS = {
     social_generated_at: "Wygenerowano",
     timeline_social: "Treści social dostępne",
 
+    promo_save: "Oszczędzasz",
+    promo_interested_sent: "Dziękujemy! Skontaktujemy się wkrótce.",
+    promo_dismissed: "Ukryte",
+
+    email_send: "Wyślij e-mailem",
+    email_send_offerte: "Wyślij ofertę do klienta",
+    email_send_factuur: "Wyślij fakturę",
+    email_send_oplevering: "Wyślij odbiór",
+    email_no_address: "Brak adresu e-mail klienta.",
+    email_opened: "Okno e-mail otwarte",
+
     status_approved: "Zatwierdzona",
     status_remarks: "Uwagi",
 
@@ -646,6 +670,17 @@ const UI_TRANSLATIONS = {
     social_after: "AFTER",
     social_generated_at: "Generated on",
     timeline_social: "Social content available",
+
+    promo_save: "Save",
+    promo_interested_sent: "Thanks! We'll be in touch shortly.",
+    promo_dismissed: "Hidden",
+
+    email_send: "Send by email",
+    email_send_offerte: "Send quote to client",
+    email_send_factuur: "Send invoice",
+    email_send_oplevering: "Send completion report",
+    email_no_address: "No email address on the client record.",
+    email_opened: "Email window opened",
 
     status_approved: "Approved",
     status_remarks: "Remarks",

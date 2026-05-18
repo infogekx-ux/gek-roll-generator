@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZZP Shield — Client Onboarding (GEK-X internal)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #C8962E;
+    --accent-light: #F5E6C8;
+    --accent-dark: #A87A1F;
+    --text: #1A1A1A;
+    --text-muted: #666;
+    --border: #E5E5E5;
+    --bg: #F4F4F4;
+    --card-bg: #FFFFFF;
+    --success: #28a745;
+    --danger: #dc3545;
+    --font-heading: 'Montserrat', sans-serif;
+    --font-body: 'Open Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  .wizard-header {
+    background: var(--text);
+    color: #FFF;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-heading);
+  }
+  .wizard-header .brand { font-weight: 800; letter-spacing: 0.5px; }
+  .wizard-header .brand-accent { color: var(--accent); }
+  .wizard-header .meta { font-size: 0.85rem; color: #BBB; font-weight: 500; }
+
+  .progress-wrap {
+    background: #FFF;
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .progress-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    font-family: var(--font-heading);
+    font-weight: 600;
+  }
+  .progress-bar { background: #EEE; height: 6px; border-radius: 3px; overflow: hidden; }
+  .progress-fill { background: var(--accent); height: 100%; transition: width 0.3s; width: 11%; }
+
+  .wizard-main {
+    max-width: 900px;
+    margin: 24px auto;
+    padding: 0 16px 80px;
+  }
+  .step { display: none; }
+  .step.active { display: block; }
+  .step-title {
+    font-family: var(--font-heading);
+    font-size: 1.75rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+  .step-subtitle { color: var(--text-muted); margin-bottom: 24px; }
+
+  .card {
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    margin-bottom: 16px;
+  }
+  .card h3 { font-family: var(--font-heading); font-size: 1.05rem; margin-bottom: 12px; color: var(--text); }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } }
+
+  .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+  .field label { font-weight: 600; font-size: 0.85rem; color: var(--text); }
+  .field .hint { font-size: 0.75rem; color: var(--text-muted); }
+  .field input, .field textarea, .field select {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    background: #FFF;
+  }
+  .field input[type="color"] { padding: 4px; height: 42px; width: 100%; cursor: pointer; }
+  .field textarea { min-height: 80px; resize: vertical; }
+  .field input:focus, .field textarea:focus, .field select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-light);
+  }
+  .field-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  @media (max-width: 700px) { .field-row-3 { grid-template-columns: 1fr; } }
+
+  .multilang { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .multilang .flag { font-size: 1.2rem; }
+  .multilang input { width: 100%; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px 22px;
+    font-family: var(--font-heading); font-weight: 600; font-size: 0.9rem;
+    border-radius: 50px; border: 2px solid transparent; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-primary { background: var(--accent); color: #FFF; border-color: var(--accent); }
+  .btn-primary:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+  .btn-secondary { background: transparent; color: var(--text); border-color: var(--text); }
+  .btn-secondary:hover { background: var(--text); color: #FFF; }
+  .btn-ghost { background: transparent; color: var(--text-muted); border-color: var(--border); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--text); }
+  .btn-danger { color: var(--danger); border-color: var(--danger); background: transparent; }
+  .btn-danger:hover { background: var(--danger); color: #FFF; }
+  .btn-sm { padding: 6px 14px; font-size: 0.8rem; }
+  .btn-block { width: 100%; }
+
+  .quick-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .quick-add {
+    background: #FFF; border: 1px solid var(--border); color: var(--text);
+    padding: 6px 12px; border-radius: 16px; cursor: pointer; font-size: 0.85rem;
+    font-family: var(--font-body); font-weight: 600;
+  }
+  .quick-add:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent-dark); }
+  .quick-add.added { background: var(--accent); border-color: var(--accent); color: #FFF; cursor: default; }
+
+  .nav-bar {
+    display: flex; justify-content: space-between; gap: 12px; margin-top: 32px;
+    padding-top: 24px; border-top: 1px solid var(--border);
+  }
+
+  .item-card {
+    background: #F8F8F8;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+    position: relative;
+  }
+  .item-card .item-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px;
+  }
+  .item-card .item-head h4 { font-family: var(--font-heading); font-size: 0.95rem; }
+
+  .review {
+    background: var(--card-bg); padding: 32px; border-radius: 10px;
+    border: 2px solid var(--accent);
+  }
+  .review-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--border); }
+  .review-row:last-child { border-bottom: none; }
+  .review-row .label { font-weight: 600; color: var(--text-muted); }
+  .swatch { display: inline-block; width: 18px; height: 18px; border-radius: 4px; vertical-align: middle; border: 1px solid var(--border); }
+
+  pre.json-output {
+    background: #1A1A1A; color: #C8E6C9; padding: 16px; border-radius: 8px;
+    font-family: 'Menlo', 'Consolas', monospace;
+    font-size: 0.8rem; max-height: 400px; overflow: auto; margin-top: 16px;
+    white-space: pre; word-break: keep-all;
+  }
+
+  .color-preview {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;
+  }
+  .preview-tile {
+    border-radius: 8px; padding: 16px; text-align: center;
+    font-family: var(--font-heading); font-weight: 700;
+  }
+  .preview-tile.light { background: #FFF; border: 1px solid var(--border); }
+  .preview-tile.dark { background: #1A1A1A; color: #FFF; }
+  .preview-tile .accent-bar { display: block; height: 4px; margin: 8px 0; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header class="wizard-header">
+  <div class="brand"><span class="brand-accent">GEK-X</span> · ZZP Shield Onboarding</div>
+  <div class="meta">Internal tool — generate <code>config.json</code></div>
+</header>
+
+<div class="progress-wrap">
+  <div class="progress-info">
+    <span id="step-name">Bedrijfsgegevens</span>
+    <span id="step-count">Stap 1 / 9</span>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+</div>
+
+<main class="wizard-main">
+
+  <!-- STEP 1: COMPANY -->
+  <section class="step active" data-step="1">
+    <h2 class="step-title">Bedrijfsgegevens</h2>
+    <p class="step-subtitle">Vul de basisgegevens van de klant in. Deze verschijnen in offertes, facturen en op de website.</p>
+    <div class="card">
+      <div class="form-grid">
+        <div class="field"><label>Bedrijfsnaam</label><input type="text" id="c-name" placeholder="PP.PONIK"></div>
+        <div class="field"><label>Eigenaar</label><input type="text" id="c-owner" placeholder="Piotr Ponikowski"></div>
+        <div class="field"><label>KvK-nummer</label><input type="text" id="c-kvk" placeholder="85923222"></div>
+        <div class="field"><label>BTW-nummer</label><input type="text" id="c-btw" placeholder="NL004172476B78"></div>
+        <div class="field"><label>IBAN</label><input type="text" id="c-iban" placeholder="NL35 KNAB 0417 7626 58"></div>
+        <div class="field"><label>Bank</label><input type="text" id="c-bank" placeholder="KNAB"></div>
+        <div class="field"><label>Straat + huisnr</label><input type="text" id="c-street" placeholder="Sibeliuspark 550"></div>
+        <div class="field"><label>Postcode</label><input type="text" id="c-postcode" placeholder="5343BR"></div>
+        <div class="field"><label>Plaats</label><input type="text" id="c-city" placeholder="Oss"></div>
+        <div class="field"><label>Land</label><input type="text" id="c-country" value="Nederland"></div>
+        <div class="field"><label>Telefoon</label><input type="tel" id="c-phone" placeholder="+31645165752"></div>
+        <div class="field">
+          <label>WhatsApp</label>
+          <input type="tel" id="c-whatsapp" placeholder="Zelfde als telefoon">
+          <span class="hint">Laat leeg = zelfde als telefoon</span>
+        </div>
+        <div class="field"><label>E-mail</label><input type="email" id="c-email" placeholder="info@bedrijf.nl"></div>
+        <div class="field"><label>Website / domein</label><input type="text" id="c-website" placeholder="bedrijf.nl"></div>
+      </div>
+    </div>
+    <div class="nav-bar"><span></span><button class="btn btn-primary" onclick="Wizard.next()">Volgende →</button></div>
+  </section>
+
+  <!-- STEP 2: BRANDING -->
+  <section class="step" data-step="2">
+    <h2 class="step-title">Branding</h2>
+    <p class="step-subtitle">Kies een accentkleur en stel de tagline in. Het logo moet apart in de assets/-map worden geplaatst.</p>
+    <div class="card">
+      <div class="form-grid">
+        <div class="field">
+          <label>Accentkleur</label>
+          <input type="color" id="b-accent" value="#C8962E">
+          <span class="hint">Wordt overal gebruikt: knoppen, accenten, offerte-randen</span>
+        </div>
+        <div class="field">
+          <label>Accent-lichte variant</label>
+          <input type="color" id="b-accent-light" value="#F5E6C8">
+          <span class="hint">Voor achtergronden en hovers</span>
+        </div>
+      </div>
+      <div class="color-preview">
+        <div class="preview-tile light">PREVIEW WIT<span class="accent-bar" id="preview-bar-light"></span><span style="font-size:0.85rem;color:var(--text-muted);">accent op witte achtergrond</span></div>
+        <div class="preview-tile dark">PREVIEW DONKER<span class="accent-bar" id="preview-bar-dark"></span><span style="font-size:0.85rem;color:#999;">accent op donkere achtergrond</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Tagline (3 talen)</h3>
+      <div class="multilang"><span class="flag">🇳🇱</span><input type="text" id="t-nl" placeholder="Timmerwerk en onderhoud"></div>
+      <div class="multilang"><span class="flag">🇵🇱</span><input type="text" id="t-pl" placeholder="Stolarka i konserwacja"></div>
+      <div class="multilang"><span class="flag">🇬🇧</span><input type="text" id="t-en" placeholder="Carpentry and maintenance"></div>
+    </div>
+    <div class="nav-bar">
+      <button class="btn btn-ghost" onclick="Wizard.prev()">← Terug</button>
+      <button class="btn btn-primary" onclick="Wizard.next()">Volgende →</button>
+    </div>
+  </section>
+
+  <!-- STEP 3: LANGUAGES -->
+  <section class="step" data-step="3">
+    <h2 class="step-title">Talen</h2>
+    <p class="step-subtitle">Welke talen ondersteunt de website? En in welke taal werkt de eigenaar zelf in het panel?</p>
+    <div class="card">
+      <div class="field">
+        <label>Beschikbare talen op de website</label>
+        <div style="display:flex;gap:16px;margin-top:6px;">
+          <label><input type="checkbox" id="l-nl" checked> 🇳🇱 Nederlands</label>
+          <label><input type="checkbox" id="l-pl" checked> 🇵🇱 Polski</label>
+          <label><input type="checkbox" id="l-en" checked> 🇬🇧 English</label>
+        </div>
+      </div>
+      <div class="form-grid" style="margin-top:16px;">
+        <div class="field">
+          <label>Standaard websitetaal</label>
+          <select id="l-default"><option value="nl">🇳🇱 Nederlands</option><option value="pl">🇵🇱 Polski</option><option value="en">🇬🇧 English</option></select>
+          <span class="hint">Welke taal opent als eerste op de website</span>
+        </div>
+        <div class="field">
+          <label>Werk-taal van de eigenaar</label>
+          <select id="l-owner"><option value="nl">🇳🇱 Nederlands</option><option value="pl" selected>🇵🇱 Polski</option><option value="en">🇬🇧 English</option></select>
+          <span class="hint">Het panel toont diensten/materialen in deze taal</span>
+        </div>
+      </div>
+    </div>
+    <div class="nav-bar">
+      <button class="btn btn-ghost" onclick="Wizard.prev()">← Terug</button>
+      <button class="btn btn-primary" onclick="Wizard.next()">Volgende →</button>
+    </div>
+  </section>
+
+  <!-- STEP 4: SERVICES -->
+  <section class="step" data-step="4">
+    <h2 class="step-title">Diensten</h2>
+    <p class="step-subtitle">Kies uit de quick-add lijst of voeg eigen diensten toe.</p>
+    <div class="card">
+      <div class="quick-bar" id="service-quick"></div>
+    </div>
+    <div id="services-list"></div>
+    <button class="btn btn-secondary btn-sm" onclick="Wizard.addService()">+ Eigen dienst</button>
+    <div class="nav-bar">
+      <button class="btn btn-ghost" onclick="Wizard.prev()">← Terug</button>
+      <button class="btn btn-primary" onclick="Wizard.next()">Volgende →</button>
+    </div>
+  </section>
+
+  <!-- STEP 5: MATERIALS -->
+  <section class="step" data-step="5">
+    <h2 class="step-title">Materialen</h2>
+    <p class="step-subtitle">Veelgebruikte materialen waar de eigenaar regelmatig prijzen voor invult.</p>
+    <div class="card">
+      <div class="quick-bar" id="material-quick"></div>
+    </div>
+    <div id="materials-list"></div>
+    <button class="btn btn-secondary btn-sm" onclick="Wizard.addMaterial()">+ Eigen materiaal</button>
+    <div class="nav-bar">
+      <button class="btn btn-ghost" onclick="Wizard.prev()">← Terug</button>
+      <button class="btn btn-primary" onclick="Wizard.next()">Volgende →</button>
+    </div>
+  </section>
+
+  <!-- STEP 6: ABOUT -->
+  <section class="step" data-step="6">
+    <h2 class="step-title">Over mij</h2>
+    <p class="step-subtitle">De biografie voor de "Over mij" sectie van de website. In alle drie talen.</p>
+    <div class="card">
+      <div class="field">
+        <label>🇳🇱 Bio NL</label>
+        <textarea id="a-nl" placeholder="Met jarenlange ervaring in de bouw bied ik..."></textarea>
+      </div>
+      <div class="field">
+        <label>🇵🇱 Bio PL</label>
+        <textarea id="a-pl" placeholder="Z wieloletnim doświadczeniem..."></textarea>
+      </div>
+      <div class="field">
+        <label>🇬🇧 Bio EN</label>
+        <textarea id="a-en" placeholder="With years of experience..."></textarea>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Jaren ervaring</label>
+          <input type="number" id="a-years" value="10" min="0">
+        </div>
+      </div>
+    </div>
+    <div class="nav-bar">
+      <button class="btn btn-ghost" onclick="Wizard.prev()">← Terug</button>
+      <button class="btn btn-primary" onclick="Wizard.next()">Volgende →</button>
+    </div>
+  </section>
+
+  <!-- STEP 7: LEGAL -->
+  <section class="step" data-step="7">
+    <h2 class="step-title">Juridisch &amp; financieel</h2>
+    <p class="step-subtitle">Alle waarden die afhankelijk zijn van de klant — voorschot-percentage, garantietermijn, etc.</p>
+    <div class="card">
+      <div class="form-grid">
+        <div class="field"><label>BTW percentage</label><input type="number" id="lg-btw" value="21" min="0" max="30"></div>
+        <div class="field"><label>Betalingstermijn (dagen)</label><input type="number" id="lg-payment" value="14" min="0"></div>
+        <div class="field"><label>Geldigheid offerte (dagen)</label><input type="number" id="lg-valid" value="30" min="1"></div>
+        <div class="field"><label>Voorschot arbeid (%)</label><input type="number" id="lg-voorschot" value="20" min="0" max="100"><span class="hint">Verschilt per klant!</span></div>
+        <div class="field"><label>Reactietijd oplevering (dagen)</label><input type="number" id="lg-response" value="5" min="0"></div>
+        <div class="field"><label>Garantietermijn (maanden)</label><input type="number" id="lg-warranty" value="6" min="0"></div>
+        <div class="field"><label>Incasso minimum (€)</label><input type="number" id="lg-incasso-min" value="40" min="0"></div>
+        <div class="field"><label>Incasso percentage</label><input type="number" id="lg-incasso-pct" value="15" min="0" max="50"></div>
+        <div class="field"><label>PIN code panel</label><input type="text" id="lg-pin" value="1234" maxlength="6"></div>
+      </div>
+    </div>
+    <div class="nav-bar">
+      <button class="btn btn-ghost" onclick="Wizard.prev()">← Terug</button>
+      <button class="btn btn-primary" onclick="Wizard.next()">Volgende →</button>
+    </div>
+  </section>
+
+  <!-- STEP 8: USP -->
+  <section class="step" data-step="8">
+    <h2 class="step-title">USP's — waarom kiezen voor ons?</h2>
+    <p class="step-subtitle">Drie kernpunten die op de website verschijnen. Standaard ingevuld — pas aan waar nodig.</p>
+    <div id="usp-list"></div>
+    <div class="nav-bar">
+      <button class="btn btn-ghost" onclick="Wizard.prev()">← Terug</button>
+      <button class="btn btn-primary" onclick="Wizard.next()">Volgende →</button>
+    </div>
+  </section>
+
+  <!-- STEP 9: REVIEW -->
+  <section class="step" data-step="9">
+    <h2 class="step-title">Overzicht &amp; download</h2>
+    <p class="step-subtitle">Controleer de gegevens en download de gegenereerde <code>config.json</code>.</p>
+    <div class="review" id="review-block"></div>
+    <pre class="json-output" id="json-output"></pre>
+    <div class="nav-bar">
+      <button class="btn btn-ghost" onclick="Wizard.prev()">← Terug bewerken</button>
+      <button class="btn btn-primary" id="btn-download"><span>✅ Download config.json</span></button>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// ============ Service & material templates ============
+const SERVICE_TEMPLATES = [
+  { id: "timmerwerk", icon: "hammer", category: "arbeid", priceType: "hourly", defaultRate: 45,
+    name: { nl: "Timmerwerk", pl: "Stolarka", en: "Carpentry" },
+    description: { nl: "Kozijnen, betimmeringen, houten constructies en maatwerk.", pl: "Okna, zabudowy, konstrukcje drewniane i prace na wymiar.", en: "Frames, paneling, wooden constructions and custom work." } },
+  { id: "elektra", icon: "zap", category: "arbeid", priceType: "hourly", defaultRate: 50,
+    name: { nl: "Elektra", pl: "Prace elektryczne", en: "Electrical work" },
+    description: { nl: "Stopcontacten, schakelaars, verlichting en installatie.", pl: "Gniazdka, włączniki, oświetlenie i instalacje.", en: "Outlets, switches, lighting and installation." } },
+  { id: "schilderwerk", icon: "paintbrush", category: "arbeid", priceType: "m2", defaultRate: 18,
+    name: { nl: "Schilderwerk", pl: "Malowanie", en: "Painting" },
+    description: { nl: "Binnen- en buitenschilderwerk, behangen en lakken.", pl: "Malowanie wnętrz i elewacji, tapetowanie, lakierowanie.", en: "Interior and exterior painting, wallpapering." } },
+  { id: "vloeren", icon: "layers", category: "arbeid", priceType: "m2", defaultRate: 25,
+    name: { nl: "Vloeren leggen", pl: "Układanie podłóg", en: "Floor installation" },
+    description: { nl: "Laminaat, PVC en houten vloeren inclusief ondervloer.", pl: "Panele, PVC i drewno z podkładem.", en: "Laminate, PVC and wood floors including underlay." } },
+  { id: "loodgieter", icon: "droplet", category: "arbeid", priceType: "hourly", defaultRate: 45,
+    name: { nl: "Loodgieterswerk", pl: "Hydraulika", en: "Plumbing" },
+    description: { nl: "Kranen, afvoeren, toiletten en leidingwerk.", pl: "Baterie, odpływy, toalety i instalacje.", en: "Faucets, drains, toilets and piping." } },
+  { id: "gipsplaten", icon: "layout-panel-left", category: "arbeid", priceType: "m2", defaultRate: 35,
+    name: { nl: "Gipsplaten & wanden", pl: "Karton-gips", en: "Drywall" },
+    description: { nl: "Scheidingswanden, plafonds en afwerking.", pl: "Ścianki, sufity i wykończenia.", en: "Partition walls, ceilings and finishing." } },
+  { id: "deuren", icon: "door-open", category: "arbeid", priceType: "per_unit", defaultRate: 120,
+    name: { nl: "Deuren plaatsen", pl: "Montaż drzwi", en: "Door installation" },
+    description: { nl: "Binnendeuren plaatsen en afstellen met kozijnen.", pl: "Montaż i regulacja drzwi z ościeżnicami.", en: "Interior door installation and adjustment." } },
+  { id: "meubelmontage", icon: "armchair", category: "arbeid", priceType: "hourly", defaultRate: 45,
+    name: { nl: "Meubelmontage", pl: "Montaż mebli", en: "Furniture assembly" },
+    description: { nl: "Keukens, kasten en badkamermeubels.", pl: "Kuchnie, szafy i meble łazienkowe.", en: "Kitchens, wardrobes and bathroom furniture." } },
+  { id: "onderhoud", icon: "wrench", category: "arbeid", priceType: "hourly", defaultRate: 40,
+    name: { nl: "Onderhoud", pl: "Konserwacja", en: "Maintenance" },
+    description: { nl: "Reparaties en klein onderhoud aan huis.", pl: "Naprawy i drobna konserwacja.", en: "Repairs and minor household maintenance." } },
+  { id: "dakwerk", icon: "home", category: "arbeid", priceType: "m2", defaultRate: 55,
+    name: { nl: "Dakwerk", pl: "Prace dachowe", en: "Roofing" },
+    description: { nl: "Dakreparatie, dakpannen en isolatie.", pl: "Naprawa dachu, dachówki i izolacja.", en: "Roof repair, tiles and insulation." } },
+  { id: "stucwerk", icon: "paintbrush", category: "arbeid", priceType: "m2", defaultRate: 30,
+    name: { nl: "Stucwerk", pl: "Tynkowanie", en: "Plastering" },
+    description: { nl: "Glad- en sierpleister, wanden en plafonds.", pl: "Tynki gładkie i dekoracyjne, ściany i sufity.", en: "Smooth and decorative plaster, walls and ceilings." } },
+  { id: "isolatie", icon: "thermometer", category: "arbeid", priceType: "m2", defaultRate: 28,
+    name: { nl: "Isolatie", pl: "Izolacja", en: "Insulation" },
+    description: { nl: "Vloer-, dak- en muurisolatie.", pl: "Izolacja podłóg, dachów i ścian.", en: "Floor, roof and wall insulation." } },
+  { id: "tegelwerk", icon: "grid-3x3", category: "arbeid", priceType: "m2", defaultRate: 45,
+    name: { nl: "Tegelwerk", pl: "Glazura", en: "Tiling" },
+    description: { nl: "Wand- en vloertegels, badkamers en keukens.", pl: "Płytki ścienne i podłogowe, łazienki i kuchnie.", en: "Wall and floor tiles, bathrooms and kitchens." } },
+  { id: "metselwerk", icon: "brick-wall", category: "arbeid", priceType: "m2", defaultRate: 50,
+    name: { nl: "Metselwerk", pl: "Murarstwo", en: "Masonry" },
+    description: { nl: "Muren, gevels en tuinmuren.", pl: "Mury, elewacje i murki ogrodowe.", en: "Walls, facades and garden walls." } }
+];
+
+const MATERIAL_TEMPLATES = [
+  { id: "gipsplaat_std", category: "materiaal", defaultPrice: 8.50,
+    name: { nl: "Gipsplaat 260x120cm", pl: "Płyta g-k 260x120cm", en: "Drywall 260x120cm" },
+    unit: { nl: "plaat", pl: "płyta", en: "sheet" } },
+  { id: "laminaat", category: "materiaal", defaultPrice: 12,
+    name: { nl: "Laminaat klasse 32", pl: "Panel klasa 32", en: "Laminate class 32" },
+    unit: { nl: "m²", pl: "m²", en: "m²" } },
+  { id: "binnendeur", category: "materiaal", defaultPrice: 85,
+    name: { nl: "Binnendeur wit", pl: "Drzwi białe", en: "White interior door" },
+    unit: { nl: "stuk", pl: "szt.", en: "pc" } },
+  { id: "kozijn", category: "materiaal", defaultPrice: 45,
+    name: { nl: "Deurkozijn", pl: "Ościeżnica", en: "Door frame" },
+    unit: { nl: "stuk", pl: "szt.", en: "pc" } },
+  { id: "verf", category: "materiaal", defaultPrice: 35,
+    name: { nl: "Muurverf wit 10L", pl: "Farba biała 10L", en: "White paint 10L" },
+    unit: { nl: "emmer", pl: "wiadro", en: "bucket" } },
+  { id: "schroeven", category: "materiaal", defaultPrice: 12,
+    name: { nl: "Schroeven assortiment", pl: "Zestaw wkrętów", en: "Screw set" },
+    unit: { nl: "doos", pl: "pud.", en: "box" } },
+  { id: "isolatiemateriaal", category: "materiaal", defaultPrice: 15,
+    name: { nl: "Isolatieplaat", pl: "Płyta izolacyjna", en: "Insulation board" },
+    unit: { nl: "m²", pl: "m²", en: "m²" } },
+  { id: "elektradraad", category: "materiaal", defaultPrice: 1.20,
+    name: { nl: "Installatiedraad 2.5mm", pl: "Przewód 2.5mm", en: "Wire 2.5mm" },
+    unit: { nl: "meter", pl: "metr", en: "meter" } },
+  { id: "pvc_buis", category: "materiaal", defaultPrice: 3.50,
+    name: { nl: "PVC buis 40mm", pl: "Rura PVC 40mm", en: "PVC pipe 40mm" },
+    unit: { nl: "meter", pl: "metr", en: "meter" } }
+];
+
+const ICON_OPTIONS = ["hammer","zap","paintbrush","layers","droplet","layout-panel-left","door-open","armchair","wrench","home","thermometer","grid-3x3","brick-wall","square","check","tool","sparkles","cog","bolt"];
+
+const DEFAULT_USPS = [
+  {
+    icon: "shield-check",
+    title: { nl: "Vakmanschap", pl: "Fachowość", en: "Craftsmanship" },
+    text: { nl: "Jarenlange ervaring. Elk project met precisie uitgevoerd.", pl: "Wieloletnie doświadczenie. Każdy projekt z precyzją.", en: "Years of experience. Every project executed with precision." }
+  },
+  {
+    icon: "clock",
+    title: { nl: "Punctueel & betrouwbaar", pl: "Punktualność i rzetelność", en: "Punctual & reliable" },
+    text: { nl: "Afspraak is afspraak. Op tijd, helder gecommuniceerd.", pl: "Umowa to umowa. Na czas, jasna komunikacja.", en: "A deal is a deal. On time, clear communication." }
+  },
+  {
+    icon: "banknote",
+    title: { nl: "Eerlijke prijzen", pl: "Uczciwe ceny", en: "Fair pricing" },
+    text: { nl: "Transparante offerte vooraf. Geen verrassingen.", pl: "Przejrzysta oferta z góry. Bez niespodzianek.", en: "Transparent quote upfront. No surprises." }
+  }
+];
+
+const TERMS_TEMPLATES = {
+  nl: (pct) => `Op al onze offertes en overeenkomsten zijn de volgende voorwaarden van toepassing:\n\n1. Voorschot: Materiaalkosten worden volledig vooraf gefactureerd, samen met ${pct}% van de arbeidskosten als borg. Werkzaamheden starten na ontvangst van het voorschot.\n2. Restant: Het resterende bedrag (${100-pct}% arbeidskosten) wordt gefactureerd na oplevering, met een betalingstermijn van 14 dagen.\n3. Wijzigingen: Wijzigingen in de opdracht dienen schriftelijk te worden overeengekomen.\n4. Annulering: Bij annulering na aankoop van materialen worden de materiaalkosten in rekening gebracht.`,
+  pl: (pct) => `Do wszystkich ofert i umów mają zastosowanie następujące warunki:\n\n1. Przedpłata: Koszty materiałów są fakturowane w całości z góry, wraz z ${pct}% kosztów robocizny jako zabezpieczenie. Prace rozpoczynają się po otrzymaniu przedpłaty.\n2. Reszta: Pozostała kwota (${100-pct}% robocizny) jest fakturowana po zakończeniu prac, z terminem płatności 14 dni.\n3. Zmiany: Zmiany w zamówieniu muszą być uzgodnione pisemnie.\n4. Anulowanie: W przypadku anulowania po zakupie materiałów, koszty materiałów zostaną naliczone.`,
+  en: (pct) => `The following terms and conditions apply to all our quotes and agreements:\n\n1. Advance payment: Material costs are invoiced in full upfront, along with ${pct}% of labor costs as a deposit. Work starts after receipt of the advance payment.\n2. Remainder: The remaining amount (${100-pct}% of labor) is invoiced upon completion, with a 14-day payment term.\n3. Changes: Changes to the assignment must be agreed upon in writing.\n4. Cancellation: In case of cancellation after material purchase, material costs will be charged.`
+};
+
+// ============ Wizard state machine ============
+const STEPS = ["Bedrijfsgegevens","Branding","Talen","Diensten","Materialen","Over mij","Juridisch","USP's","Overzicht"];
+
+const Wizard = {
+  step: 1,
+  services: [],
+  materials: [],
+  usps: JSON.parse(JSON.stringify(DEFAULT_USPS)),
+
+  init() {
+    this.renderQuickAdd();
+    this.renderServices();
+    this.renderMaterials();
+    this.renderUsps();
+    this.updateProgress();
+    this.bindLive();
+    document.getElementById('btn-download').addEventListener('click', () => this.download());
+  },
+
+  next() { if (this.step < 9) { this.step++; this.updateUi(); } },
+  prev() { if (this.step > 1) { this.step--; this.updateUi(); } },
+
+  updateUi() {
+    document.querySelectorAll('.step').forEach(s => s.classList.toggle('active', +s.dataset.step === this.step));
+    this.updateProgress();
+    if (this.step === 9) this.renderReview();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  },
+
+  updateProgress() {
+    document.getElementById('step-count').textContent = `Stap ${this.step} / 9`;
+    document.getElementById('step-name').textContent = STEPS[this.step - 1];
+    document.getElementById('progress-fill').style.width = (this.step / 9 * 100) + '%';
+  },
+
+  bindLive() {
+    const updateBars = () => {
+      const c = document.getElementById('b-accent').value;
+      document.getElementById('preview-bar-light').style.background = c;
+      document.getElementById('preview-bar-dark').style.background = c;
+    };
+    document.getElementById('b-accent').addEventListener('input', updateBars);
+    updateBars();
+    // Auto-fill light variant on first accent change
+    document.getElementById('b-accent').addEventListener('change', () => {
+      const lightInput = document.getElementById('b-accent-light');
+      if (lightInput.value === '#F5E6C8' || !lightInput.dataset.touched) {
+        lightInput.value = this.lightenColor(document.getElementById('b-accent').value, 0.75);
+      }
+    });
+    document.getElementById('b-accent-light').addEventListener('input', (e) => { e.target.dataset.touched = '1'; });
+  },
+
+  // Cheap lighten
+  lightenColor(hex, ratio) {
+    const c = hex.replace('#', '');
+    const r = parseInt(c.slice(0, 2), 16);
+    const g = parseInt(c.slice(2, 4), 16);
+    const b = parseInt(c.slice(4, 6), 16);
+    const nr = Math.round(r + (255 - r) * ratio);
+    const ng = Math.round(g + (255 - g) * ratio);
+    const nb = Math.round(b + (255 - b) * ratio);
+    return '#' + [nr, ng, nb].map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
+  },
+
+  renderQuickAdd() {
+    const sq = document.getElementById('service-quick');
+    sq.innerHTML = SERVICE_TEMPLATES.map((t, i) =>
+      `<button class="quick-add" data-template-idx="${i}" data-type="service">${escapeHtml(t.name.nl)}</button>`
+    ).join('');
+    sq.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => this.addServiceFromTemplate(+btn.dataset.templateIdx, btn));
+    });
+
+    const mq = document.getElementById('material-quick');
+    mq.innerHTML = MATERIAL_TEMPLATES.map((t, i) =>
+      `<button class="quick-add" data-template-idx="${i}" data-type="material">${escapeHtml(t.name.nl)}</button>`
+    ).join('');
+    mq.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => this.addMaterialFromTemplate(+btn.dataset.templateIdx, btn));
+    });
+  },
+
+  addServiceFromTemplate(idx, btn) {
+    if (this.services.some(s => s._template === idx)) return;
+    const t = JSON.parse(JSON.stringify(SERVICE_TEMPLATES[idx]));
+    t._template = idx;
+    this.services.push(t);
+    this.renderServices();
+    btn.classList.add('added');
+  },
+
+  addMaterialFromTemplate(idx, btn) {
+    if (this.materials.some(m => m._template === idx)) return;
+    const t = JSON.parse(JSON.stringify(MATERIAL_TEMPLATES[idx]));
+    t._template = idx;
+    this.materials.push(t);
+    this.renderMaterials();
+    btn.classList.add('added');
+  },
+
+  addService() {
+    this.services.push({
+      id: 'custom_' + Date.now(), icon: 'wrench', category: 'arbeid',
+      priceType: 'hourly', defaultRate: 45,
+      name: { nl: '', pl: '', en: '' },
+      description: { nl: '', pl: '', en: '' }
+    });
+    this.renderServices();
+  },
+
+  addMaterial() {
+    this.materials.push({
+      id: 'custom_' + Date.now(), category: 'materiaal', defaultPrice: 0,
+      name: { nl: '', pl: '', en: '' },
+      unit: { nl: '', pl: '', en: '' }
+    });
+    this.renderMaterials();
+  },
+
+  renderServices() {
+    const wrap = document.getElementById('services-list');
+    wrap.innerHTML = this.services.map((s, i) => `
+      <div class="item-card">
+        <div class="item-head">
+          <h4>Dienst ${i + 1}: ${escapeHtml(s.name.nl || '(naamloos)')}</h4>
+          <button class="btn btn-danger btn-sm" data-remove-service="${i}">✕</button>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Icoon</label>
+            <select data-svc-idx="${i}" data-svc-field="icon">${ICON_OPTIONS.map(o => `<option value="${o}" ${o === s.icon ? 'selected' : ''}>${o}</option>`).join('')}</select>
+          </div>
+          <div class="field">
+            <label>Prijstype</label>
+            <select data-svc-idx="${i}" data-svc-field="priceType">
+              <option value="hourly" ${s.priceType === 'hourly' ? 'selected' : ''}>Per uur</option>
+              <option value="m2" ${s.priceType === 'm2' ? 'selected' : ''}>Per m²</option>
+              <option value="per_unit" ${s.priceType === 'per_unit' ? 'selected' : ''}>Per stuk</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Standaardtarief (€)</label>
+            <input type="number" step="0.01" data-svc-idx="${i}" data-svc-field="defaultRate" value="${s.defaultRate}">
+          </div>
+          <div class="field">
+            <label>Categorie</label>
+            <select data-svc-idx="${i}" data-svc-field="category">
+              <option value="arbeid" ${s.category === 'arbeid' ? 'selected' : ''}>Arbeid</option>
+              <option value="materiaal" ${s.category === 'materiaal' ? 'selected' : ''}>Materiaal</option>
+            </select>
+          </div>
+        </div>
+        <div class="field"><label>Naam NL</label><input type="text" data-svc-idx="${i}" data-svc-lang="name.nl" value="${escapeAttr(s.name.nl)}"></div>
+        <div class="field"><label>Naam PL</label><input type="text" data-svc-idx="${i}" data-svc-lang="name.pl" value="${escapeAttr(s.name.pl)}"></div>
+        <div class="field"><label>Naam EN</label><input type="text" data-svc-idx="${i}" data-svc-lang="name.en" value="${escapeAttr(s.name.en)}"></div>
+        <div class="field"><label>Beschrijving NL</label><textarea data-svc-idx="${i}" data-svc-lang="description.nl">${escapeHtml(s.description.nl)}</textarea></div>
+        <div class="field"><label>Beschrijving PL</label><textarea data-svc-idx="${i}" data-svc-lang="description.pl">${escapeHtml(s.description.pl)}</textarea></div>
+        <div class="field"><label>Beschrijving EN</label><textarea data-svc-idx="${i}" data-svc-lang="description.en">${escapeHtml(s.description.en)}</textarea></div>
+      </div>
+    `).join('');
+
+    wrap.querySelectorAll('[data-remove-service]').forEach(btn => btn.addEventListener('click', () => {
+      this.services.splice(+btn.dataset.removeService, 1);
+      this.renderServices();
+    }));
+    wrap.querySelectorAll('[data-svc-idx]').forEach(el => {
+      el.addEventListener('change', (e) => this.handleServiceChange(e));
+      el.addEventListener('input', (e) => this.handleServiceChange(e));
+    });
+  },
+
+  handleServiceChange(e) {
+    const idx = +e.target.dataset.svcIdx;
+    const s = this.services[idx];
+    if (!s) return;
+    if (e.target.dataset.svcField) {
+      const f = e.target.dataset.svcField;
+      s[f] = (f === 'defaultRate') ? parseFloat(e.target.value) || 0 : e.target.value;
+    }
+    if (e.target.dataset.svcLang) {
+      const [parent, lang] = e.target.dataset.svcLang.split('.');
+      s[parent][lang] = e.target.value;
+    }
+  },
+
+  renderMaterials() {
+    const wrap = document.getElementById('materials-list');
+    wrap.innerHTML = this.materials.map((m, i) => `
+      <div class="item-card">
+        <div class="item-head">
+          <h4>Materiaal ${i + 1}: ${escapeHtml(m.name.nl || '(naamloos)')}</h4>
+          <button class="btn btn-danger btn-sm" data-remove-material="${i}">✕</button>
+        </div>
+        <div class="form-grid">
+          <div class="field"><label>Naam NL</label><input type="text" data-mat-idx="${i}" data-mat-lang="name.nl" value="${escapeAttr(m.name.nl)}"></div>
+          <div class="field"><label>Naam PL</label><input type="text" data-mat-idx="${i}" data-mat-lang="name.pl" value="${escapeAttr(m.name.pl)}"></div>
+          <div class="field"><label>Naam EN</label><input type="text" data-mat-idx="${i}" data-mat-lang="name.en" value="${escapeAttr(m.name.en)}"></div>
+          <div class="field"><label>Standaardprijs (€)</label><input type="number" step="0.01" data-mat-idx="${i}" data-mat-field="defaultPrice" value="${m.defaultPrice}"></div>
+          <div class="field"><label>Eenheid NL</label><input type="text" data-mat-idx="${i}" data-mat-lang="unit.nl" value="${escapeAttr(m.unit.nl)}"></div>
+          <div class="field"><label>Eenheid PL</label><input type="text" data-mat-idx="${i}" data-mat-lang="unit.pl" value="${escapeAttr(m.unit.pl)}"></div>
+          <div class="field"><label>Eenheid EN</label><input type="text" data-mat-idx="${i}" data-mat-lang="unit.en" value="${escapeAttr(m.unit.en)}"></div>
+        </div>
+      </div>
+    `).join('');
+
+    wrap.querySelectorAll('[data-remove-material]').forEach(btn => btn.addEventListener('click', () => {
+      this.materials.splice(+btn.dataset.removeMaterial, 1);
+      this.renderMaterials();
+    }));
+    wrap.querySelectorAll('[data-mat-idx]').forEach(el => {
+      el.addEventListener('change', (e) => this.handleMaterialChange(e));
+      el.addEventListener('input', (e) => this.handleMaterialChange(e));
+    });
+  },
+
+  handleMaterialChange(e) {
+    const idx = +e.target.dataset.matIdx;
+    const m = this.materials[idx];
+    if (!m) return;
+    if (e.target.dataset.matField) {
+      m[e.target.dataset.matField] = e.target.dataset.matField === 'defaultPrice' ? parseFloat(e.target.value) || 0 : e.target.value;
+    }
+    if (e.target.dataset.matLang) {
+      const [parent, lang] = e.target.dataset.matLang.split('.');
+      m[parent][lang] = e.target.value;
+    }
+  },
+
+  renderUsps() {
+    const wrap = document.getElementById('usp-list');
+    wrap.innerHTML = this.usps.map((u, i) => `
+      <div class="card">
+        <h3>USP ${i + 1}</h3>
+        <div class="form-grid">
+          <div class="field"><label>Icoon</label><input type="text" data-usp-idx="${i}" data-usp-field="icon" value="${escapeAttr(u.icon)}"></div>
+          <div class="field"><label>Titel NL</label><input type="text" data-usp-idx="${i}" data-usp-lang="title.nl" value="${escapeAttr(u.title.nl)}"></div>
+          <div class="field"><label>Titel PL</label><input type="text" data-usp-idx="${i}" data-usp-lang="title.pl" value="${escapeAttr(u.title.pl)}"></div>
+          <div class="field"><label>Titel EN</label><input type="text" data-usp-idx="${i}" data-usp-lang="title.en" value="${escapeAttr(u.title.en)}"></div>
+        </div>
+        <div class="field"><label>Tekst NL</label><textarea data-usp-idx="${i}" data-usp-lang="text.nl">${escapeHtml(u.text.nl)}</textarea></div>
+        <div class="field"><label>Tekst PL</label><textarea data-usp-idx="${i}" data-usp-lang="text.pl">${escapeHtml(u.text.pl)}</textarea></div>
+        <div class="field"><label>Tekst EN</label><textarea data-usp-idx="${i}" data-usp-lang="text.en">${escapeHtml(u.text.en)}</textarea></div>
+      </div>
+    `).join('');
+
+    wrap.querySelectorAll('[data-usp-idx]').forEach(el => {
+      el.addEventListener('change', (e) => this.handleUspChange(e));
+      el.addEventListener('input', (e) => this.handleUspChange(e));
+    });
+  },
+
+  handleUspChange(e) {
+    const idx = +e.target.dataset.uspIdx;
+    const u = this.usps[idx];
+    if (!u) return;
+    if (e.target.dataset.uspField) u[e.target.dataset.uspField] = e.target.value;
+    if (e.target.dataset.uspLang) {
+      const [parent, lang] = e.target.dataset.uspLang.split('.');
+      u[parent][lang] = e.target.value;
+    }
+  },
+
+  collect() {
+    const phone = val('c-phone');
+    const config = {
+      company: {
+        name: val('c-name'),
+        tagline: { nl: val('t-nl'), pl: val('t-pl'), en: val('t-en') },
+        owner: val('c-owner'),
+        kvk: val('c-kvk'),
+        btw: val('c-btw'),
+        iban: val('c-iban'),
+        bank: val('c-bank'),
+        address: {
+          street: val('c-street'),
+          postcode: val('c-postcode'),
+          city: val('c-city'),
+          country: val('c-country')
+        },
+        phone,
+        whatsapp: val('c-whatsapp') || phone,
+        email: val('c-email'),
+        website: val('c-website'),
+        socials: { facebook: '', instagram: '', linkedin: '' }
+      },
+      branding: {
+        accentColor: val('b-accent'),
+        accentColorLight: val('b-accent-light'),
+        textColor: '#1A1A1A',
+        backgroundColor: '#FFFFFF',
+        cardBackground: '#F8F8F8',
+        fontHeading: 'Montserrat',
+        fontBody: 'Open Sans',
+        logoHeight: '60px'
+      },
+      languages: {
+        default: val('l-default'),
+        available: ['nl', 'pl', 'en'].filter(l => document.getElementById('l-' + l).checked),
+        ownerLanguage: val('l-owner')
+      },
+      panel: { pin: val('lg-pin') },
+      services: this.services.map(s => {
+        const { _template, ...rest } = s;
+        return rest;
+      }),
+      materials: this.materials.map(m => {
+        const { _template, ...rest } = m;
+        return rest;
+      }),
+      about: {
+        bio: { nl: val('a-nl'), pl: val('a-pl'), en: val('a-en') },
+        experience_years: parseInt(val('a-years'), 10) || 0
+      },
+      usp: this.usps,
+      contact: {
+        formFields: ['name', 'email', 'phone', 'message', 'photos'],
+        mapEmbed: true,
+        whatsappButton: true,
+        maxPhotoUpload: 5,
+        maxPhotoSizeMB: 10
+      },
+      legal: {
+        btw_percentage: numVal('lg-btw', 21),
+        payment_terms_days: numVal('lg-payment', 14),
+        offerte_valid_days: numVal('lg-valid', 30),
+        voorschot_arbeid_percentage: numVal('lg-voorschot', 20),
+        oplevering_response_days: numVal('lg-response', 5),
+        warranty_months: numVal('lg-warranty', 6),
+        incasso_minimum: numVal('lg-incasso-min', 40),
+        incasso_percentage: numVal('lg-incasso-pct', 15),
+        photo_max_dimension_px: 1280,
+        terms: {
+          nl: TERMS_TEMPLATES.nl(numVal('lg-voorschot', 20)),
+          pl: TERMS_TEMPLATES.pl(numVal('lg-voorschot', 20)),
+          en: TERMS_TEMPLATES.en(numVal('lg-voorschot', 20))
+        }
+      }
+    };
+    return config;
+  },
+
+  renderReview() {
+    const c = this.collect();
+    const html = `
+      <div class="review-row"><span class="label">Bedrijf</span><span>${escapeHtml(c.company.name)} — ${escapeHtml(c.company.owner)}</span></div>
+      <div class="review-row"><span class="label">Vestiging</span><span>${escapeHtml(c.company.address.street)}, ${escapeHtml(c.company.address.postcode)} ${escapeHtml(c.company.address.city)}</span></div>
+      <div class="review-row"><span class="label">KvK / BTW</span><span>${escapeHtml(c.company.kvk)} / ${escapeHtml(c.company.btw)}</span></div>
+      <div class="review-row"><span class="label">IBAN</span><span>${escapeHtml(c.company.iban)} (${escapeHtml(c.company.bank)})</span></div>
+      <div class="review-row"><span class="label">Telefoon / e-mail</span><span>${escapeHtml(c.company.phone)} · ${escapeHtml(c.company.email)}</span></div>
+      <div class="review-row"><span class="label">Talen</span><span>${c.languages.available.join(', ')} (standaard: ${c.languages.default}, eigenaar: ${c.languages.ownerLanguage})</span></div>
+      <div class="review-row"><span class="label">Diensten</span><span>${c.services.length} stuks</span></div>
+      <div class="review-row"><span class="label">Materialen</span><span>${c.materials.length} stuks</span></div>
+      <div class="review-row"><span class="label">USP's</span><span>${c.usp.length} stuks</span></div>
+      <div class="review-row"><span class="label">Accent</span><span><span class="swatch" style="background:${c.branding.accentColor}"></span> ${c.branding.accentColor}</span></div>
+      <div class="review-row"><span class="label">Voorschot arbeid</span><span>${c.legal.voorschot_arbeid_percentage}%</span></div>
+      <div class="review-row"><span class="label">BTW / betaaltermijn</span><span>${c.legal.btw_percentage}% / ${c.legal.payment_terms_days} dagen</span></div>
+      <div class="review-row"><span class="label">Garantie / oplevering reactie</span><span>${c.legal.warranty_months} maanden / ${c.legal.oplevering_response_days} dagen</span></div>
+      <div class="review-row"><span class="label">Panel PIN</span><span>${escapeHtml(c.panel.pin)}</span></div>
+    `;
+    document.getElementById('review-block').innerHTML = html;
+    document.getElementById('json-output').textContent = JSON.stringify(c, null, 2);
+  },
+
+  download() {
+    const c = this.collect();
+    const blob = new Blob([JSON.stringify(c, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'config.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+};
+
+function val(id) { return (document.getElementById(id)?.value || '').trim(); }
+function numVal(id, fallback) { const v = parseFloat(document.getElementById(id)?.value); return Number.isFinite(v) ? v : fallback; }
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+function escapeAttr(s) { return escapeHtml(s); }
+
+document.addEventListener('DOMContentLoaded', () => Wizard.init());
+</script>
+</body>
+</html>

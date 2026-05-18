@@ -1,0 +1,25 @@
+{
+  "promotions": [
+    {
+      "id": "promo-2026-06-magnetic-cards",
+      "active": true,
+      "start": "2026-06-01",
+      "end": "2026-06-30",
+      "title": {
+        "nl": "🧲 Magnetische visitekaartjes — nu €49",
+        "pl": "🧲 Wizytówki magnetyczne — teraz €49",
+        "en": "🧲 Magnetic business cards — now €49"
+      },
+      "description": {
+        "nl": "Professionele magnetische visitekaartjes met jouw logo. Plak ze op elke koelkast — een vaste herinnering aan jouw naam.",
+        "pl": "Profesjonalne wizytówki magnetyczne z Twoim logo. Przylep na każdą lodówkę — trwałe przypomnienie o Twojej firmie.",
+        "en": "Professional magnetic business cards with your logo. Stick them on any fridge — a permanent reminder of your name."
+      },
+      "image": null,
+      "originalPrice": 79,
+      "promoPrice": 49,
+      "cta_interested": { "nl": "Interessant!", "pl": "Chętnie!", "en": "Interested!" },
+      "cta_dismiss": { "nl": "Nee bedankt", "pl": "Nie, dzięki", "en": "No thanks" }
+    }
+  ]
+}

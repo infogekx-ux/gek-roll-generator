@@ -9,6 +9,11 @@ SRC_BASE="$BASE/base"
 SRC_CLIENT="$BASE/clients/$CLIENT"
 DEPLOY="$BASE/deploy/$CLIENT"
 
+# Folders starting with _ are internal GEK-X tools (e.g. _onboarding) — not buildable
+case "$CLIENT" in
+  _*) echo "Refusing to build internal folder '$CLIENT'. Open it directly in a browser instead."; exit 1 ;;
+esac
+
 if [ ! -d "$SRC_CLIENT" ]; then
   echo "Client folder not found: $SRC_CLIENT"
   exit 1

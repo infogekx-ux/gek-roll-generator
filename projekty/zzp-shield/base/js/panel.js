@@ -22,6 +22,7 @@ const Panel = {
     Offerte.init(this.config);
     if (window.Oplevering) Oplevering.init(this.config);
     if (window.SocialGenerator) SocialGenerator.init(this.config);
+    if (window.EmailSender) EmailSender.init(this.config);
 
     const ownerLang = this.config.languages.ownerLanguage || this.config.languages.default;
     I18n.setLang(ownerLang);
@@ -135,6 +136,7 @@ const Panel = {
     const main = document.getElementById('panel-main');
 
     main.innerHTML = `
+      <div id="promo-slot"></div>
       <div class="panel-header">
         <h1>${this.listType === 'factuur' ? I18n.t('panel_facturen') : I18n.t('panel_offertes')}</h1>
         <button class="btn btn-primary" id="btn-new">
@@ -153,6 +155,119 @@ const Panel = {
       el.addEventListener('click', () => this.openBuilder(el.dataset.openId));
     });
     this.refreshIcons();
+
+    // Promotions are best-effort; fail silently if hub is unreachable
+    this.loadPromotions().catch(() => {});
+  },
+
+  // -- Promotions (broadcast to all panels via Supabase public storage)
+  async loadPromotions() {
+    const promoHub = this.config.promotions || {
+      url: 'https://dkihhmphimfqhyuzajwc.supabase.co/storage/v1/object/public/gek-x-hub/promotions/active.json',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRraWhobXBoaW1mcWh5dXphandjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MzI0NzQsImV4cCI6MjA4NzEwODQ3NH0.ky8a6mcPzlRKZyit6JbuyCJ2ZA7KnH6h2mmzpzNmjsw',
+      leadsTable: 'zzp_promo_leads',
+      restBase: 'https://dkihhmphimfqhyuzajwc.supabase.co/rest/v1'
+    };
+    this.promoHub = promoHub;
+
+    const res = await fetch(promoHub.url, { headers: { apikey: promoHub.anonKey } });
+    if (!res.ok) return;
+    const data = await res.json();
+    const promos = (data.promotions || []).filter(p => this.isPromoVisible(p));
+    if (promos.length) this.renderPromos(promos);
+  },
+
+  isPromoVisible(promo) {
+    if (!promo.active) return false;
+    const now = Date.now();
+    if (promo.start && now < new Date(promo.start).getTime()) return false;
+    if (promo.end && now > new Date(promo.end).getTime() + 24 * 3600 * 1000) return false;
+    if (localStorage.getItem(`promo_dismissed_${promo.id}`)) return false;
+    return true;
+  },
+
+  renderPromos(promos) {
+    const slot = document.getElementById('promo-slot');
+    if (!slot) return;
+    const lang = this.config.languages.ownerLanguage || I18n.currentLang;
+
+    slot.innerHTML = promos.map(p => {
+      if (localStorage.getItem(`promo_interested_${p.id}`)) {
+        return `<div class="promo-banner"><div class="promo-confirmation">${I18n.t('promo_interested_sent')}</div></div>`;
+      }
+      const title = I18n.get(p.title, lang);
+      const desc = I18n.get(p.description, lang);
+      const ctaInterested = I18n.get(p.cta_interested, lang) || I18n.t('promo_interested') || 'Interested';
+      const ctaDismiss = I18n.get(p.cta_dismiss, lang) || 'Dismiss';
+      const priceBlock = (p.originalPrice && p.promoPrice) ? `
+        <div class="promo-price">
+          <span class="price-old">€${p.originalPrice}</span>
+          <span class="price-new">€${p.promoPrice}</span>
+          <span class="price-save">-€${Math.max(0, p.originalPrice - p.promoPrice)}</span>
+        </div>
+      ` : '';
+      return `
+        <div class="promo-banner" data-promo-id="${p.id}">
+          <div class="promo-content">
+            <h3>${Offerte.escapeHtml(title)}</h3>
+            <p>${Offerte.escapeHtml(desc)}</p>
+            ${priceBlock}
+          </div>
+          <div class="promo-actions">
+            <button class="btn btn-primary" data-promo-action="interested" data-promo-id="${p.id}">${Offerte.escapeHtml(ctaInterested)}</button>
+            <button class="btn btn-secondary btn-sm" data-promo-action="dismiss" data-promo-id="${p.id}">${Offerte.escapeHtml(ctaDismiss)}</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    slot.querySelectorAll('[data-promo-action]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = btn.dataset.promoId;
+        const action = btn.dataset.promoAction;
+        if (action === 'interested') this.handlePromoInterest(id);
+        else this.handlePromoDismiss(id);
+      });
+    });
+  },
+
+  async handlePromoInterest(promoId) {
+    localStorage.setItem(`promo_interested_${promoId}`, new Date().toISOString());
+    try {
+      const c = this.config.company;
+      const payload = {
+        promo_id: promoId,
+        company_name: c.name,
+        owner_name: c.owner,
+        email: c.email,
+        phone: c.phone,
+        kvk: c.kvk,
+        language: this.config.languages.ownerLanguage || 'nl',
+        source_url: window.location.origin + window.location.pathname,
+        status: 'new'
+      };
+      await fetch(`${this.promoHub.restBase}/${this.promoHub.leadsTable}`, {
+        method: 'POST',
+        headers: {
+          apikey: this.promoHub.anonKey,
+          Authorization: 'Bearer ' + this.promoHub.anonKey,
+          'Content-Type': 'application/json',
+          Prefer: 'return=minimal'
+        },
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {
+      console.warn('Promo lead post failed (lead saved locally):', e);
+    }
+    // Re-render to show confirmation
+    const slot = document.getElementById('promo-slot');
+    if (slot) slot.innerHTML = `<div class="promo-banner"><div class="promo-confirmation">${I18n.t('promo_interested_sent')}</div></div>`;
+  },
+
+  handlePromoDismiss(promoId) {
+    localStorage.setItem(`promo_dismissed_${promoId}`, new Date().toISOString());
+    const el = document.querySelector(`[data-promo-id="${promoId}"]`);
+    if (el && el.classList.contains('promo-banner')) el.remove();
   },
 
   docCard(doc) {
@@ -298,6 +413,7 @@ const Panel = {
 
       <div class="builder-actions">
         <button class="btn btn-secondary" id="btn-preview"><i data-lucide="eye"></i> ${I18n.t('builder_preview')}</button>
+        <button class="btn btn-secondary" id="btn-email"><i data-lucide="mail"></i> ${isOfferte ? I18n.t('email_send_offerte') : I18n.t('email_send_factuur')}</button>
         <button class="btn btn-primary" id="btn-save"><i data-lucide="save"></i> ${I18n.t('builder_save')}</button>
       </div>
     `;
@@ -581,6 +697,28 @@ const Panel = {
 
     const socialBtn = document.getElementById('btn-generate-social');
     if (socialBtn) socialBtn.addEventListener('click', () => this.handleGenerateSocial(socialBtn));
+
+    const emailBtn = document.getElementById('btn-email');
+    if (emailBtn) emailBtn.addEventListener('click', () => this.handleEmailSend());
+  },
+
+  async handleEmailSend() {
+    this.syncFromForm();
+    Storage.upsert(this.currentDoc, this.currentDoc.type);
+    if (!this.currentDoc.client?.email) {
+      alert(I18n.t('email_no_address'));
+      return;
+    }
+    const fn = this.currentDoc.type === 'factuur' ? 'sendFactuur' : 'sendOfferte';
+    const result = await EmailSender[fn](this.currentDoc.id);
+    if (result.success) {
+      this.flashMessage('✓ ' + I18n.t('email_opened'));
+      // Refresh from storage (status may have changed)
+      this.currentDoc = Storage.getById(this.currentDoc.id, this.currentDoc.type);
+      this.renderBuilder();
+    } else {
+      alert(result.error || 'Failed');
+    }
   },
 
   async handleGenerateSocial(btn) {
@@ -1050,11 +1188,19 @@ const Panel = {
       window.open(url, '_blank');
     });
 
-    document.getElementById('op-send').addEventListener('click', () => {
+    document.getElementById('op-send').addEventListener('click', async () => {
       Oplevering.updateNotes(this.currentDoc.id, document.getElementById('op-notes').value);
-      Oplevering.send(this.currentDoc.id);
-      const url = `./oplevering-view.html?id=${encodeURIComponent(this.currentDoc.id)}`;
-      window.open(url, '_blank');
+      if (this.currentDoc.client?.email && window.EmailSender) {
+        const result = await EmailSender.sendOplevering(this.currentDoc.id);
+        if (!result.success) {
+          alert(result.error || 'Failed');
+          return;
+        }
+      } else {
+        Oplevering.send(this.currentDoc.id);
+        const url = `./oplevering-view.html?id=${encodeURIComponent(this.currentDoc.id)}`;
+        window.open(url, '_blank');
+      }
       this.currentDoc = Storage.getById(this.currentDoc.id, 'offerte');
       this.renderOplevering();
     });

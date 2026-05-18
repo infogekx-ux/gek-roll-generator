@@ -21,9 +21,14 @@ projekty/zzp-shield/
 │       ├── dupochron.js         # client acceptance — terms in all 3 languages
 │       ├── oplevering.js        # completion report engine
 │       ├── social-generator.js  # Canvas-based social media image generator
+│       ├── email-sender.js      # email delivery (mailto v1, edge-function-ready)
 │       ├── gallery.js           # lightbox
 │       └── contact.js           # form + drag-drop photo upload
+│   └── sql/
+│       └── 001_promo_leads.sql  # zzp_promo_leads table + RLS (anon INSERT only)
 ├── clients/
+│   ├── _onboarding/             # internal GEK-X wizard for generating a new config.json
+│   │   └── onboarding.html      # standalone, no base/ dependency
 │   └── ppponik/                 # PP.PONIK — first client
 │       ├── config/config.json   # all client data
 │       ├── index.html           # public site
@@ -221,11 +226,44 @@ Key: `zzp_shield_data`
 }
 ```
 
+## Onboarding wizard (`clients/_onboarding/onboarding.html`)
+
+Internal GEK-X tool — a standalone single-file wizard that walks through 9 steps and produces a download-ready `config.json` for a new client:
+
+1. Company details
+2. Branding (colour picker with live preview on light + dark, tagline in 3 languages)
+3. Languages
+4. Services — 14 quick-add templates (timmerwerk, elektra, schilderwerk, vloeren, loodgieter, gipsplaten, deuren, meubelmontage, onderhoud, dakwerk, stucwerk, isolatie, tegelwerk, metselwerk), all with NL/PL/EN names + default rate + category
+5. Materials — 9 quick-add templates
+6. About me (bio per language, experience years)
+7. Legal & financial — all the `config.legal.*` knobs including `voorschot_arbeid_percentage`, `warranty_months`, `oplevering_response_days`, `incasso_*`, panel PIN
+8. USPs (3 defaults, editable per language)
+9. Review + JSON preview + **Download config.json** button
+
+The Algemene Voorwaarden text in all 3 languages is generated from a template that interpolates the chosen `voorschot_arbeid_percentage`. The wizard is fully self-contained — Dawid can open it directly via `file://` or host it anywhere.
+
+## Promotions hub
+
+A central JSON file at `gek-x-hub/projekty/zzp-shield/promotions/active.json` carries promotions GEK-X wants to broadcast to **every** deployed ZZP panel. On panel load:
+
+- `Panel.loadPromotions()` fetches the public storage URL with the **anon** key (best-effort; fails silently)
+- Active, in-date, undismissed promotions render as a banner above the offerte/factuur list, localised to the owner's language
+- **Interested** → POSTs a row to `zzp_promo_leads` (anon key + RLS `INSERT`-only policy from `base/sql/001_promo_leads.sql`) carrying `company_name / owner / email / phone / kvk / language / source_url`, then shows a confirmation
+- **Dismiss** → sets `localStorage.promo_dismissed_<id>` so the panel never shows that promo again on that device
+
+**Security note**: only the **anon** key is embedded in the panel JS. The `zzp_promo_leads` RLS policy allows `INSERT` from `anon`/`authenticated` and nothing else — no SELECT/UPDATE/DELETE possible without the service role.
+
+## Email delivery (`base/js/email-sender.js`)
+
+`EmailSender.sendOfferte(id)` / `sendFactuur(id)` / `sendOplevering(id)` — uses a `mailto:` URL with a localised subject + body + view link. The owner's mail client opens prefilled; the doc's `status` and `sent_at` timestamp are updated. The module surface is designed to be swapped for a Supabase Edge Function + Resend without touching callers.
+
+Builder actions on offerte and factuur now include a **Verstuur per e-mail** button. The oplevering "Send to client" button uses the same path.
+
 ## Roadmap
 
-- **v1 (this release)** — website + panel + offerte/factuur builder + auto-split + dupochron (localStorage).
-- **v2** — Supabase backend, email sending (Resend), real cross-device dupochron, PDF export (html2pdf.js), e-signature.
-- **v3** — project phases with photo evidence, oplevering checklist.
+- **v1–v4 (this release)** — website + panel + auto-split + dupochron + meerwerk + beginsituatie + oplevering + timeline + social content + onboarding wizard + promotions + email (mailto).
+- **v5** — Supabase backend for cross-device data, Edge Function + Resend for real email delivery, PDF export (html2pdf.js), e-signature.
+- **v6** — project phases with photo evidence, oplevering checklist.
 
 ## Footer credit
 
