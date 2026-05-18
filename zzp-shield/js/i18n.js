@@ -1,0 +1,392 @@
+// i18n.js - UI translations (NL/PL/EN)
+// Data translations (services, materials) come from config.json
+
+const UI_TRANSLATIONS = {
+  nl: {
+    nav_services: "Diensten",
+    nav_gallery: "Galerie",
+    nav_about: "Over mij",
+    nav_contact: "Contact",
+    hero_cta_quote: "Vraag een offerte aan",
+    hero_cta_gallery: "Bekijk mijn werk",
+    services_heading: "Onze diensten",
+    services_subheading: "Vakwerk voor uw woning of bedrijfspand",
+    usp_heading: "Waarom kiezen voor ons?",
+    gallery_heading: "Onze projecten",
+    gallery_subheading: "Een greep uit recent uitgevoerde werkzaamheden",
+    gallery_empty: "Binnenkort foto's van onze projecten",
+    about_heading: "Over mij",
+    about_experience: "jaar ervaring",
+    contact_heading: "Neem contact op",
+    contact_subheading: "Vraag vrijblijvend een offerte aan",
+    contact_name: "Uw naam",
+    contact_email: "E-mailadres",
+    contact_phone: "Telefoonnummer",
+    contact_message: "Uw bericht",
+    contact_photos: "Foto's toevoegen (optioneel)",
+    contact_photos_hint: "Sleep foto's hierheen of klik om te uploaden",
+    contact_language: "Gewenste communicatietaal",
+    contact_submit: "Verstuur bericht",
+    contact_whatsapp: "WhatsApp ons",
+    contact_phone_label: "Telefoon",
+    contact_email_label: "E-mail",
+    contact_address_label: "Adres",
+    form_success: "Bedankt! Uw bericht is verzonden. We nemen zo snel mogelijk contact met u op.",
+    form_error: "Er ging iets mis. Probeer het opnieuw of bel ons direct.",
+    footer_rights: "Alle rechten voorbehouden",
+    footer_by: "Website door",
+    footer_contact: "Contact",
+    footer_legal: "Bedrijfsgegevens",
+
+    // Offerte / factuur
+    offerte_title: "Offerte",
+    offerte_date: "Datum",
+    offerte_valid: "Geldig tot",
+    offerte_to: "Aan",
+    offerte_from: "Van",
+    offerte_description: "Omschrijving",
+    offerte_quantity: "Aantal",
+    offerte_unit: "Eenheid",
+    offerte_price: "Prijs",
+    offerte_total: "Totaal",
+    offerte_subtotal: "Subtotaal",
+    offerte_btw: "BTW",
+    offerte_payment: "Betaaltermijn",
+    offerte_days: "dagen",
+    offerte_terms: "Voorwaarden",
+    factuur_title: "Factuur",
+    factuur_number: "Factuurnummer",
+    factuur_iban: "IBAN",
+    factuur_due: "Vervaldatum",
+
+    // Units
+    unit_hour: "uur",
+    unit_hourly: "uur",
+    unit_m2: "m²",
+    unit_per_unit: "stuk",
+    unit_piece: "stuk",
+    unit_sheet: "plaat",
+    unit_bucket: "emmer",
+    unit_box: "doos",
+
+    // Panel
+    panel_login_title: "Inloggen",
+    panel_login_pin: "PIN code",
+    panel_login_btn: "Inloggen",
+    panel_login_error: "Onjuiste PIN code",
+    panel_logout: "Uitloggen",
+    panel_offertes: "Offertes",
+    panel_facturen: "Facturen",
+    panel_new_offerte: "Nieuwe offerte",
+    panel_new_factuur: "Nieuwe factuur",
+    panel_empty_offertes: "Nog geen offertes. Maak je eerste offerte aan.",
+    panel_empty_facturen: "Nog geen facturen.",
+
+    builder_client: "Klantgegevens",
+    builder_client_name: "Naam klant / bedrijf",
+    builder_client_address: "Adres",
+    builder_client_email: "E-mailadres",
+    builder_client_lang: "Taal van de offerte",
+    builder_items: "Regels",
+    builder_add_service: "+ Dienst",
+    builder_add_material: "+ Materiaal",
+    builder_add_custom: "+ Eigen regel",
+    builder_details: "Details",
+    builder_valid_days: "Geldigheidsduur (dagen)",
+    builder_payment_days: "Betalingstermijn (dagen)",
+    builder_notes: "Opmerkingen",
+    builder_preview: "Voorbeeld",
+    builder_save: "Opslaan",
+    builder_save_send: "Opslaan & versturen",
+    builder_to_invoice: "Maak factuur",
+    builder_back: "Terug",
+    builder_delete: "Verwijderen",
+    builder_confirm_delete: "Weet je zeker dat je dit wilt verwijderen?",
+
+    status_concept: "Concept",
+    status_sent: "Verstuurd",
+    status_accepted: "Geaccepteerd",
+    status_rejected: "Afgewezen",
+    status_open: "Open",
+    status_paid: "Betaald",
+    status_overdue: "Te laat",
+  },
+
+  pl: {
+    nav_services: "Usługi",
+    nav_gallery: "Galeria",
+    nav_about: "O mnie",
+    nav_contact: "Kontakt",
+    hero_cta_quote: "Zapytaj o wycenę",
+    hero_cta_gallery: "Zobacz realizacje",
+    services_heading: "Nasze usługi",
+    services_subheading: "Profesjonalne wykonanie dla domu lub firmy",
+    usp_heading: "Dlaczego warto nas wybrać?",
+    gallery_heading: "Nasze realizacje",
+    gallery_subheading: "Wybrane projekty z naszego portfolio",
+    gallery_empty: "Wkrótce zdjęcia naszych realizacji",
+    about_heading: "O mnie",
+    about_experience: "lat doświadczenia",
+    contact_heading: "Skontaktuj się",
+    contact_subheading: "Zapytaj o bezpłatną wycenę",
+    contact_name: "Twoje imię",
+    contact_email: "Adres e-mail",
+    contact_phone: "Numer telefonu",
+    contact_message: "Twoja wiadomość",
+    contact_photos: "Dodaj zdjęcia (opcjonalnie)",
+    contact_photos_hint: "Przeciągnij zdjęcia tutaj lub kliknij aby wybrać",
+    contact_language: "Preferowany język komunikacji",
+    contact_submit: "Wyślij wiadomość",
+    contact_whatsapp: "Napisz na WhatsApp",
+    contact_phone_label: "Telefon",
+    contact_email_label: "E-mail",
+    contact_address_label: "Adres",
+    form_success: "Dziękujemy! Wiadomość została wysłana. Skontaktujemy się z Tobą wkrótce.",
+    form_error: "Coś poszło nie tak. Spróbuj ponownie lub zadzwoń bezpośrednio.",
+    footer_rights: "Wszelkie prawa zastrzeżone",
+    footer_by: "Strona stworzona przez",
+    footer_contact: "Kontakt",
+    footer_legal: "Dane firmy",
+
+    offerte_title: "Oferta",
+    offerte_date: "Data",
+    offerte_valid: "Ważna do",
+    offerte_to: "Dla",
+    offerte_from: "Od",
+    offerte_description: "Opis",
+    offerte_quantity: "Ilość",
+    offerte_unit: "Jednostka",
+    offerte_price: "Cena",
+    offerte_total: "Razem",
+    offerte_subtotal: "Suma netto",
+    offerte_btw: "VAT",
+    offerte_payment: "Termin płatności",
+    offerte_days: "dni",
+    offerte_terms: "Warunki",
+    factuur_title: "Faktura",
+    factuur_number: "Numer faktury",
+    factuur_iban: "IBAN",
+    factuur_due: "Termin płatności",
+
+    unit_hour: "godz.",
+    unit_hourly: "godz.",
+    unit_m2: "m²",
+    unit_per_unit: "szt.",
+    unit_piece: "szt.",
+    unit_sheet: "płyta",
+    unit_bucket: "wiadro",
+    unit_box: "pudełko",
+
+    panel_login_title: "Logowanie",
+    panel_login_pin: "Kod PIN",
+    panel_login_btn: "Zaloguj",
+    panel_login_error: "Nieprawidłowy kod PIN",
+    panel_logout: "Wyloguj",
+    panel_offertes: "Oferty",
+    panel_facturen: "Faktury",
+    panel_new_offerte: "Nowa oferta",
+    panel_new_factuur: "Nowa faktura",
+    panel_empty_offertes: "Brak ofert. Utwórz pierwszą ofertę.",
+    panel_empty_facturen: "Brak faktur.",
+
+    builder_client: "Dane klienta",
+    builder_client_name: "Imię klienta / firma",
+    builder_client_address: "Adres",
+    builder_client_email: "Adres e-mail",
+    builder_client_lang: "Język oferty",
+    builder_items: "Pozycje",
+    builder_add_service: "+ Usługa",
+    builder_add_material: "+ Materiał",
+    builder_add_custom: "+ Własny wiersz",
+    builder_details: "Szczegóły",
+    builder_valid_days: "Ważność (dni)",
+    builder_payment_days: "Termin płatności (dni)",
+    builder_notes: "Uwagi",
+    builder_preview: "Podgląd",
+    builder_save: "Zapisz",
+    builder_save_send: "Zapisz i wyślij",
+    builder_to_invoice: "Utwórz fakturę",
+    builder_back: "Powrót",
+    builder_delete: "Usuń",
+    builder_confirm_delete: "Czy na pewno chcesz to usunąć?",
+
+    status_concept: "Szkic",
+    status_sent: "Wysłana",
+    status_accepted: "Zaakceptowana",
+    status_rejected: "Odrzucona",
+    status_open: "Otwarta",
+    status_paid: "Zapłacona",
+    status_overdue: "Zaległa",
+  },
+
+  en: {
+    nav_services: "Services",
+    nav_gallery: "Gallery",
+    nav_about: "About me",
+    nav_contact: "Contact",
+    hero_cta_quote: "Request a quote",
+    hero_cta_gallery: "View our work",
+    services_heading: "Our services",
+    services_subheading: "Skilled craftsmanship for home and business",
+    usp_heading: "Why choose us?",
+    gallery_heading: "Our projects",
+    gallery_subheading: "A selection of our recent work",
+    gallery_empty: "Project photos coming soon",
+    about_heading: "About me",
+    about_experience: "years of experience",
+    contact_heading: "Get in touch",
+    contact_subheading: "Request a free quote with no obligation",
+    contact_name: "Your name",
+    contact_email: "Email address",
+    contact_phone: "Phone number",
+    contact_message: "Your message",
+    contact_photos: "Add photos (optional)",
+    contact_photos_hint: "Drag photos here or click to upload",
+    contact_language: "Preferred communication language",
+    contact_submit: "Send message",
+    contact_whatsapp: "WhatsApp us",
+    contact_phone_label: "Phone",
+    contact_email_label: "Email",
+    contact_address_label: "Address",
+    form_success: "Thank you! Your message has been sent. We'll get back to you soon.",
+    form_error: "Something went wrong. Please try again or call us directly.",
+    footer_rights: "All rights reserved",
+    footer_by: "Website by",
+    footer_contact: "Contact",
+    footer_legal: "Company details",
+
+    offerte_title: "Quotation",
+    offerte_date: "Date",
+    offerte_valid: "Valid until",
+    offerte_to: "To",
+    offerte_from: "From",
+    offerte_description: "Description",
+    offerte_quantity: "Quantity",
+    offerte_unit: "Unit",
+    offerte_price: "Price",
+    offerte_total: "Total",
+    offerte_subtotal: "Subtotal",
+    offerte_btw: "VAT",
+    offerte_payment: "Payment terms",
+    offerte_days: "days",
+    offerte_terms: "Terms",
+    factuur_title: "Invoice",
+    factuur_number: "Invoice number",
+    factuur_iban: "IBAN",
+    factuur_due: "Due date",
+
+    unit_hour: "hr",
+    unit_hourly: "hr",
+    unit_m2: "m²",
+    unit_per_unit: "pc",
+    unit_piece: "pc",
+    unit_sheet: "sheet",
+    unit_bucket: "bucket",
+    unit_box: "box",
+
+    panel_login_title: "Login",
+    panel_login_pin: "PIN code",
+    panel_login_btn: "Sign in",
+    panel_login_error: "Incorrect PIN code",
+    panel_logout: "Logout",
+    panel_offertes: "Quotes",
+    panel_facturen: "Invoices",
+    panel_new_offerte: "New quote",
+    panel_new_factuur: "New invoice",
+    panel_empty_offertes: "No quotes yet. Create your first one.",
+    panel_empty_facturen: "No invoices yet.",
+
+    builder_client: "Client details",
+    builder_client_name: "Client name / company",
+    builder_client_address: "Address",
+    builder_client_email: "Email address",
+    builder_client_lang: "Quote language",
+    builder_items: "Line items",
+    builder_add_service: "+ Service",
+    builder_add_material: "+ Material",
+    builder_add_custom: "+ Custom row",
+    builder_details: "Details",
+    builder_valid_days: "Validity (days)",
+    builder_payment_days: "Payment terms (days)",
+    builder_notes: "Notes",
+    builder_preview: "Preview",
+    builder_save: "Save",
+    builder_save_send: "Save & send",
+    builder_to_invoice: "Create invoice",
+    builder_back: "Back",
+    builder_delete: "Delete",
+    builder_confirm_delete: "Are you sure you want to delete this?",
+
+    status_concept: "Draft",
+    status_sent: "Sent",
+    status_accepted: "Accepted",
+    status_rejected: "Rejected",
+    status_open: "Open",
+    status_paid: "Paid",
+    status_overdue: "Overdue",
+  }
+};
+
+const FLAGS = { nl: "🇳🇱", pl: "🇵🇱", en: "🇬🇧" };
+
+const I18n = {
+  currentLang: 'nl',
+  config: null,
+
+  init(config) {
+    this.config = config;
+    const saved = localStorage.getItem('zzp_lang');
+    const available = config?.languages?.available || ['nl', 'pl', 'en'];
+    if (saved && available.includes(saved)) {
+      this.currentLang = saved;
+    } else {
+      this.currentLang = config?.languages?.default || 'nl';
+    }
+  },
+
+  t(key) {
+    return UI_TRANSLATIONS[this.currentLang]?.[key] || UI_TRANSLATIONS.nl[key] || key;
+  },
+
+  setLang(lang) {
+    this.currentLang = lang;
+    localStorage.setItem('zzp_lang', lang);
+    document.documentElement.lang = lang;
+    document.dispatchEvent(new CustomEvent('langchange', { detail: { lang } }));
+  },
+
+  // Get translated value from a multilingual field { nl: "...", pl: "...", en: "..." }
+  get(field, lang = null) {
+    if (!field) return '';
+    if (typeof field === 'string') return field;
+    const target = lang || this.currentLang;
+    return field[target] || field.nl || field.en || Object.values(field)[0] || '';
+  },
+
+  // Translate UI for a specific language (used in offerte preview)
+  tFor(lang, key) {
+    return UI_TRANSLATIONS[lang]?.[key] || UI_TRANSLATIONS.nl[key] || key;
+  },
+
+  formatPrice(amount, lang = null) {
+    const target = lang || this.currentLang;
+    const locale = target === 'nl' ? 'nl-NL' : target === 'pl' ? 'pl-PL' : 'en-GB';
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: 2
+    }).format(amount);
+  },
+
+  formatDate(date, lang = null) {
+    const target = lang || this.currentLang;
+    const locale = target === 'nl' ? 'nl-NL' : target === 'pl' ? 'pl-PL' : 'en-GB';
+    return new Intl.DateTimeFormat(locale, {
+      day: 'numeric', month: 'long', year: 'numeric'
+    }).format(date instanceof Date ? date : new Date(date));
+  }
+};
+
+window.I18n = I18n;
+window.UI_TRANSLATIONS = UI_TRANSLATIONS;
+window.FLAGS = FLAGS;

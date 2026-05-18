@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Offerte / Faktura / Quote</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="./css/base.css">
+  <link rel="stylesheet" href="./css/components.css">
+
+  <style>
+    body { background: #F4F4F4; padding: 0; }
+  </style>
+</head>
+<body>
+  <div class="doc-actions no-print">
+    <button class="btn btn-secondary btn-sm" onclick="window.history.back()">
+      ← Terug
+    </button>
+    <button class="btn btn-primary btn-sm" onclick="window.print()">
+      Afdrukken / PDF
+    </button>
+  </div>
+
+  <div id="preview-root">
+    <p style="text-align:center;padding:48px;">Laden...</p>
+  </div>
+
+  <script src="./js/i18n.js"></script>
+  <script src="./js/offerte.js"></script>
+  <script>
+    (async function() {
+      try {
+        const res = await fetch('./config/config.json');
+        const config = await res.json();
+        window.AppConfig = config;
+        I18n.init(config);
+        Offerte.init(config);
+
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id');
+        const type = params.get('type') || 'offerte';
+
+        if (!id) {
+          document.getElementById('preview-root').innerHTML = '<p style="text-align:center;padding:48px;">Geen ID opgegeven.</p>';
+          return;
+        }
+
+        const doc = Storage.getById(id, type);
+        if (!doc) {
+          document.getElementById('preview-root').innerHTML = `<p style="text-align:center;padding:48px;">Document ${id} niet gevonden.</p>`;
+          return;
+        }
+
+        // Apply branding
+        const b = config.branding || {};
+        const root = document.documentElement.style;
+        if (b.accentColor) root.setProperty('--accent', b.accentColor);
+        if (b.accentColorLight) root.setProperty('--accent-light', b.accentColorLight);
+        if (b.fontHeading) root.setProperty('--font-heading', `'${b.fontHeading}', sans-serif`);
+        if (b.fontBody) root.setProperty('--font-body', `'${b.fontBody}', sans-serif`);
+
+        const lang = doc.client?.language || 'nl';
+        document.documentElement.lang = lang;
+        const docType = doc.type === 'factuur' ? I18n.tFor(lang, 'factuur_title') : I18n.tFor(lang, 'offerte_title');
+        document.title = `${docType} ${doc.id} — ${config.company.name}`;
+
+        document.getElementById('preview-root').innerHTML = Offerte.renderPreview(doc);
+      } catch (e) {
+        console.error(e);
+        document.getElementById('preview-root').innerHTML = '<p style="text-align:center;padding:48px;">Er ging iets mis.</p>';
+      }
+    })();
+  </script>
+</body>
+</html>
