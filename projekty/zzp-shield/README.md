@@ -20,6 +20,7 @@ projekty/zzp-shield/
 │       ├── panel.js             # ZZP'er dashboard (login, list, builder, lifecycle, timeline)
 │       ├── dupochron.js         # client acceptance — terms in all 3 languages
 │       ├── oplevering.js        # completion report engine
+│       ├── social-generator.js  # Canvas-based social media image generator
 │       ├── gallery.js           # lightbox
 │       └── contact.js           # form + drag-drop photo upload
 ├── clients/
@@ -139,7 +140,18 @@ Once an offerte is accepted (via dupochron or manual status change), the builder
 - Photos are resized client-side to a max dimension (config `legal.photo_max_dimension_px`) before being stored as data URLs, to keep localStorage usable
 
 #### Timeline panel
-A condensed lifecycle view on top of the builder, combining: offerte creation → client opened → accepted → voorschot invoice (with status + amount) → beginsituatie → any meerwerk invoices → oplevering sent/decision → eindfactuur (with status + amount). Status colors reflect paid/open/overdue.
+A condensed lifecycle view on top of the builder, combining: offerte creation → client opened → accepted → voorschot invoice (with status + amount) → beginsituatie → any meerwerk invoices → oplevering sent/decision → eindfactuur (with status + amount) → social content generated. Status colors reflect paid/open/overdue.
+
+#### Auto social content (Phase 3)
+- Available on any accepted offerte that has both `beginsituatie.photos[0]` and `oplevering.photos[0]`.
+- Click **Genereer social content** → `SocialGenerator.generateAll(offerteId)` uses the Canvas API to produce three branded JPEGs from the first before/after photo pair:
+  - **Reel** — 1080×1920 (9:16) — Instagram / TikTok story-format, before above / after below, branding strip at the bottom
+  - **Post** — 1080×1080 (1:1) — side-by-side before/after, accent divider, brand strip
+  - **Banner** — 1200×630 — landscape, suitable for Facebook / LinkedIn / OG image
+- Each format uses the client's accent colour, logo, company name, phone, and tagline — all read from `config.json`, nothing hardcoded.
+- Output is a JPEG data URL; download buttons use `<a download>` with filenames like `pp-ponik-reel-OFF-2026-001.jpg`.
+- Generation is fully client-side (no backend). Fonts are awaited via the Font Loading API so canvas picks up Montserrat / Open Sans.
+- Adds a Timeline entry `Social content beschikbaar` with the generation timestamp.
 
 ## All hardcoded values come from config
 

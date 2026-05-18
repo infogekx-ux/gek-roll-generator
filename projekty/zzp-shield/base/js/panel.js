@@ -21,6 +21,7 @@ const Panel = {
     I18n.init(this.config);
     Offerte.init(this.config);
     if (window.Oplevering) Oplevering.init(this.config);
+    if (window.SocialGenerator) SocialGenerator.init(this.config);
 
     const ownerLang = this.config.languages.ownerLanguage || this.config.languages.default;
     I18n.setLang(ownerLang);
@@ -223,6 +224,7 @@ const Panel = {
 
       ${isAccepted ? this.renderLifecycleCard(doc) : ''}
       ${isAccepted ? this.renderTimelineCard(doc) : ''}
+      ${isAccepted && this.canGenerateSocial(doc) ? this.renderSocialCard(doc) : ''}
 
       <div class="builder-card">
         <h2>${I18n.t('builder_client')}</h2>
@@ -333,6 +335,63 @@ const Panel = {
     `;
   },
 
+  canGenerateSocial(doc) {
+    return !!window.SocialGenerator
+      && (doc.beginsituatie?.photos?.length || 0) > 0
+      && (doc.oplevering?.photos?.length || 0) > 0;
+  },
+
+  renderSocialCard(doc) {
+    const cached = this.socialCache?.[doc.id];
+    const generatedAt = doc.socialContent?.generated_at
+      ? new Date(doc.socialContent.generated_at).toLocaleString()
+      : null;
+
+    if (!cached) {
+      return `
+        <div class="builder-card" id="social-card">
+          <h2><i data-lucide="share-2" style="display:inline-block;vertical-align:middle;"></i> ${I18n.t('social_title')}</h2>
+          <p style="color:var(--text-muted);margin-bottom:16px;">${I18n.t('social_subtitle')}</p>
+          ${generatedAt ? `<div class="social-meta">${I18n.t('social_generated_at')}: ${generatedAt}</div>` : ''}
+          <button class="btn btn-primary" id="btn-generate-social">
+            <i data-lucide="image-plus"></i>
+            ${generatedAt ? I18n.t('social_regenerate') : I18n.t('social_generate')}
+          </button>
+        </div>
+      `;
+    }
+
+    const formats = [
+      { key: 'reel', label: I18n.t('social_reel') },
+      { key: 'post', label: I18n.t('social_post') },
+      { key: 'banner', label: I18n.t('social_banner') }
+    ];
+
+    return `
+      <div class="builder-card" id="social-card">
+        <h2><i data-lucide="share-2" style="display:inline-block;vertical-align:middle;"></i> ${I18n.t('social_title')}</h2>
+        ${generatedAt ? `<div class="social-meta">${I18n.t('social_generated_at')}: ${generatedAt}</div>` : ''}
+        <div class="social-preview">
+          <div class="social-grid">
+            ${formats.map(f => `
+              <div class="social-item">
+                <div class="social-item-thumb"><img src="${cached[f.key]}" alt="${f.label}"></div>
+                <span class="social-item-label">${f.label}</span>
+                <a download="${SocialGenerator.filename(f.key, doc)}" href="${cached[f.key]}" class="btn btn-primary btn-sm">
+                  <i data-lucide="download"></i>
+                  ${I18n.t('social_download')}
+                </a>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        <div style="margin-top:16px;">
+          <button class="btn btn-secondary btn-sm" id="btn-generate-social"><i data-lucide="refresh-cw"></i> ${I18n.t('social_regenerate')}</button>
+        </div>
+      </div>
+    `;
+  },
+
   renderTimelineCard(doc) {
     const events = this.buildTimeline(doc);
     return `
@@ -426,6 +485,14 @@ const Panel = {
       });
     }
 
+    if (doc.socialContent?.generated_at) {
+      events.push({
+        label: I18n.t('timeline_social'),
+        meta: fmt(doc.socialContent.generated_at),
+        cls: 'done'
+      });
+    }
+
     return events;
   },
 
@@ -511,6 +578,37 @@ const Panel = {
     if (meerwerkBtn) meerwerkBtn.addEventListener('click', () => this.handleMeerwerk());
     const opleveringBtn = document.getElementById('btn-oplevering');
     if (opleveringBtn) opleveringBtn.addEventListener('click', () => this.openOplevering(this.currentDoc.id));
+
+    const socialBtn = document.getElementById('btn-generate-social');
+    if (socialBtn) socialBtn.addEventListener('click', () => this.handleGenerateSocial(socialBtn));
+  },
+
+  async handleGenerateSocial(btn) {
+    btn.disabled = true;
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = `<i data-lucide="loader-2"></i> ${I18n.t('social_generating')}`;
+    this.refreshIcons();
+    try {
+      const result = await SocialGenerator.generateAll(this.currentDoc.id);
+      if (!result) {
+        alert('Voor/na foto\'s ontbreken.');
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        this.refreshIcons();
+        return;
+      }
+      this.socialCache = this.socialCache || {};
+      this.socialCache[this.currentDoc.id] = result;
+      this.currentDoc.socialContent = { generated_at: new Date().toISOString() };
+      Storage.upsert(this.currentDoc, 'offerte');
+      this.renderBuilder();
+    } catch (e) {
+      console.error(e);
+      alert('Kon social content niet genereren: ' + (e.message || e));
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
+      this.refreshIcons();
+    }
   },
 
   handleSplit() {
