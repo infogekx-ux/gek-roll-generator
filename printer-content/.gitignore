@@ -1,0 +1,14 @@
+# Surowe materiały — nie commitujemy do repo, są zbyt duże
+refs/
+output/
+*.mp4
+*.mov
+*.jpg
+*.jpeg
+*.png
+*.raw
+*.dng
+*.heic
+
+# Wyjątki — placeholdery / przykłady które mają być w repo
+!docs/example-*.jpg
