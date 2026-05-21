@@ -1,74 +1,107 @@
-# Printer Macro Content — Workflow GEK-X
+# Printer Macro Content — Workflow GEK-X (v2, post-research)
 
-Workflow do generowania krótkich rolek (TikTok / Reels / Shorts) z makro ujęciami
-drukarki **Prestige R1**: tusz, głowica, kropla, mechanika.
+Workflow do generowania krótkich rolek (TikTok / Reels / Shorts) z makro
+ujęciami drukarki **Prestige R1**: tusz, głowica, kropla, mechanika.
 
-## TL;DR — dlaczego dotychczas wychodziły „krowie cycki"
+Po researchu (maj 2026) — dawny single-path (Higgsfield) zamieniony na
+**6 niezależnych ścieżek**, każda działa samodzielnie, można je też łączyć.
 
-Każdy model tekst-to-video (Sora / Veo z samego promptu / Runway tekstowo)
-**nie wie jak wygląda Prestige R1**. To niszowa drukarka DTF, w danych treningowych
-go nie ma. Model halucynuje głowicę — stąd dysze jak wymiona.
+---
 
-**Rozwiązanie:** zamiast tekstu → daj modelowi **swoje zdjęcie** drukarki jako
-„kotwicę". Wtedy generuje ruch wokół rzeczywistego obiektu zamiast zmyślać go
-od zera.
+## TL;DR — diagnoza i wybór
 
-To jest najbliższe „prompt → gotowy wynik" jakie dziś istnieje dla niszowego sprzętu.
+**Dlaczego dotychczas wychodziły „krowie cycki":** żaden model tekst-to-video
+(Sora z samego promptu, Veo bez referencji, Runway tekstowo) **nie zna Prestige R1**.
+Niszowa drukarka DTF, nie ma jej w treningu. Model halucynuje głowicę → wymiona.
 
-## Pipeline (3 etapy, ~2h pierwsze uruchomienie, potem 20 min na rolkę)
+**Trzy działające strategie żeby to obejść:**
+1. **Daj modelowi referencję** (twoje zdjęcie) — image-to-video, model trzyma się obrazka
+2. **Wytrenuj model na drukarce** (LoRA) — model UCZY SIĘ jak wygląda Prestige R1
+3. **Nagraj kamerą / telefonem, nie generuj** — najszybszy, najautentyczniejszy
+
+W praktyce: łącz wszystkie trzy. Sekcja niżej rekomenduje konkretną mieszankę.
+
+---
+
+## Wybór ścieżki — co kiedy
+
+| Sytuacja | Ścieżka | Plik |
+|---|---|---|
+| **Chcę post jutro, mam telefon** | A — Telefon Pro + macro lens | [`PLAN-A-TELEFON.md`](./PLAN-A-TELEFON.md) |
+| **Mam zdjęcia, chcę AI b-roll na klip** | B — Fal.ai MCP (Seedance 2.0) | [`PLAN-B-FAL-MCP.md`](./PLAN-B-FAL-MCP.md) |
+| **Zero API keys, szybki test AI** | C — Pixa MCP (free tier) | [`PLAN-C-PIXA-MCP.md`](./PLAN-C-PIXA-MCP.md) |
+| **Chcę „prompt → wynik" jak dla popularnych produktów** | D — Wan 2.2 LoRA na drukarce | [`PLAN-D-LORA.md`](./PLAN-D-LORA.md) |
+| **Mam dłuższe wideo, chcę rolki** | E — FNF Clipify (MCP wbudowane) | [`PLAN-E-CLIPIFY.md`](./PLAN-E-CLIPIFY.md) |
+| **Daily autopilot na TT/IG/YT** | F — n8n + Fal.ai + Blotato | [`n8n/README.md`](./n8n/README.md) |
+
+**Moja rekomendacja dla ciebie (Prestige R1, mały zespół, niszowy B2B):**
 
 ```
-[Etap 1: Sesja foto]   →   [Etap 2: Higgsfield Seedance 2.0]   →   [Etap 3: Composing]
-   raz w życiu, 1h           image-to-video, 4-6s na klip            CapCut / FFmpeg
-   12 zdjęć starczy          ~5-10 klipów = rolka                     12-18s gotowa
+Tydzień 1:  PLAN A (telefon + macro lens) → masz 12 referencji + 1 rolkę
+Tydzień 2:  PLAN B (Fal.ai MCP) → animujesz referencje, masz 5 rolek
+Miesiąc 2:  PLAN E (Clipify) → 1 dłuższy YT = 10 rolek z subtitles
+Miesiąc 3:  PLAN D (LoRA) → trenujesz raz, generujesz nielimitowanie
+Później:    PLAN F (n8n) → daily content na autopilot
 ```
 
-### Etap 1 — Sesja foto (raz, fundament całego workflow)
-Patrz [`SHOT-LIST.md`](./SHOT-LIST.md) — konkretna lista 12 ujęć + parametry telefonu/lampki.
+---
 
-### Etap 2 — Generacja klipów
-Patrz [`PROMPTY.md`](./PROMPTY.md) — gotowe prompty do skopiowania pod każde ujęcie z shot listy.
+## Co już wiemy o konkurencji DTF na TikToku (case studies)
 
-Modele (w kolejności jakości / kosztu):
-- **Seedance 2.0** (`seedance_2_0`) — domyślny, image-to-video z preservation identity, 4–15s, do 1080p
-- **Kling 3.0** (`kling3_0`) — multi-shot, motion-transfer, gdy chcesz pokazać ruch z innego wideo
-- **Veo 3.1** (`veo3_1`) — ultra-realistyczne, ale tylko start_image (mniejsza kontrola końca klipu)
-- **Marketing Studio Video** (`marketing_studio_video`) — gdy chcesz pełen ad-format (z hookiem, settingiem) zamiast surowego B-rollu
+Przeanalizowane kanały:
+- [`@eagledtfprint`](https://www.tiktok.com/@eagledtfprint/) — behind-the-scenes, telefonem, ~10-30k views/post
+- [`@merchstudio_dtf`](https://www.tiktok.com/@merchstudio_dtf/) — workspace tours, satisfying process
+- [`@mtutechprinters`](https://www.tiktok.com/@mtutechprinters/) — UV printer factory shots, „what really happens behind the camera"
+- Screen printer viral video — ~10M views, czysta produkcja + ruch maszyny + hook na 1s
 
-### Etap 3 — Composing
-Patrz [`compose.sh`](./compose.sh) — FFmpeg skleja klipy w rolkę 1080×1920, dorzuca muzykę.
-Alternatywa: CapCut Mobile (szybciej dla początku — drag & drop, gotowe szablony TikTok).
+**Co działa:**
+- Hook w 0–2s (kropla tuszu, zbliżenie głowicy, „you won't believe what's inside")
+- Satisfying process (przelewanie tuszu, ruch głowicy)
+- ZERO sprzedaży w klipie, payoff w opisie / linku
+- Telefon, nie polished filmówka. TT karze „za-AI"-owy content.
 
-## Automatyzacja (opcjonalnie, gdy workflow już chodzi)
+**Czego unikać:**
+- Voice-over na cały klip (tylko hook + outro)
+- Tekstu który zasłania makro
+- Logo GEK-X na środku (TT bany na shameless promo)
+- Stockowych przejść (whoosh / glitch — wygląda jak boomerski klip)
 
-Patrz [`n8n/workflow.json`](./n8n/workflow.json) — szkielet n8n:
-- Trigger: nowy folder w Google Drive (twoja sesja foto)
-- → HTTP POST do Higgsfield API z każdym zdjęciem + promptem ze słownika
-- → Polling jobów aż gotowe
-- → Pobiera klipy do Supabase Storage (bucket `printer-content/`)
-- → Slack / Email notyfikacja: „masz N klipów do złożenia"
+---
 
-**UWAGA:** Composing zostaje ręczny. Hook do rolki, muzyka, tekst — TikTok algorytm
-karze fully-auto content. n8n daje ci surowiec; CapCut daje ci virala.
+## Koszty orientacyjne (maj 2026, USD → PLN ≈ 4.0)
 
-## Koszt orientacyjny (Higgsfield, stan: maj 2026)
+| Komponent | Koszt | Per rolka |
+|---|---|---|
+| iPhone macro lens (Sandmarc / Apexel) | $20–60 jednorazowo | 0 |
+| LED panel 5500K 10W | $10 jednorazowo | 0 |
+| Fal.ai Seedance 2.0 fast 720p 5s | $1.21 | $6–8 (5 klipów) |
+| Fal.ai Seedance 2.0 std 1080p 8s | $2.42 | $12–15 (5 klipów) |
+| Pixa MCP free tier | $0 | $0 (limit ~5 klipów/mc) |
+| RunPod RTX 4090 / LoRA training | $0.69/h × 2h | $1.40 jednorazowo |
+| Wan 2.2 inference RunPod | $0.10/klip | $0.50 (5 klipów) |
+| FNF Clipify (już w MCP) | depends on plan | tanie |
+| n8n self-host | $0 | $0 |
+| Blotato (auto-publishing) | $25/mc | dystrybucja N rolek |
 
-- Seedance 2.0 720p, 5s ≈ 20–30 kredytów / klip
-- Veo 3.1 ultra 8s ≈ 100+ kredytów / klip
-- Marketing Studio Image (do generowania „polished" zdjęć z twojego zdjęcia) ≈ 5-10 kredytów
+**Najefektywniej koszt vs jakość:** PLAN A (telefon) → PLAN D (LoRA) → unlimited generation za grosze.
 
-Rolka = ~5 klipów = ~100-150 kredytów = ok. 5-10 zł.
+---
 
-## Czego NIE robić (powtórki błędów)
+## Struktura plików w repo
 
-1. **Nie próbuj tekst-to-video bez zdjęcia.** Veo / Sora / Runway tekstowo
-   = krowie cycki, gwarantowane.
-2. **Nie używaj zdjęć portretowych iPhone'a.** Tryb portret rozmywa makro.
-   Tryb Pro, manualny focus, RAW.
-3. **Nie używaj LED-ów drukarki jako jedynego światła.** Lampka boczna 5500K,
-   inaczej zielony / niebieski cast.
-4. **Nie generuj 1080p na próbę.** Najpierw 720p / fast mode → jak ujęcie działa,
-   wtedy re-render w wyższej.
-5. **Nie nazywaj produktu w prompcie modelu.** Model nie zna „Prestige R1" — pisz
-   opisowo: „industrial DTF printer with black metal casing, white print head carriage".
-   Identyfikacja przyjdzie z referencji zdjęciowej, nie z nazwy.
+```
+printer-content/
+  README.md                  ← jesteś tu, mapa
+  PLAN-A-TELEFON.md          ← shot list, ustawienia iPhone, macro lens
+  PLAN-B-FAL-MCP.md          ← Fal.ai MCP w Claude Code, Seedance 2.0
+  PLAN-C-PIXA-MCP.md         ← Pixa MCP no-API-key
+  PLAN-D-LORA.md             ← Wan 2.2 LoRA training na RunPod
+  PLAN-E-CLIPIFY.md          ← FNF Clipify (już w MCP), długie YT → 10 rolek
+  PROMPTY.md                 ← prompty per ujęcie pod Seedance / Wan / Kling
+  SHOT-LIST.md               ← 12 ujęć do nagrania (sesja 1h)
+  CASE-STUDIES.md            ← linki do DTF konkurencji + analiza co działa
+  compose.sh                 ← FFmpeg sklejka klipów w rolkę 9:16
+  n8n/
+    README.md                ← jak wdrożyć
+    workflow.json            ← importowalny, Fal.ai zamiast Higgsfielda
+```
