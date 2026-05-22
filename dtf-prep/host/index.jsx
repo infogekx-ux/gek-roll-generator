@@ -343,7 +343,206 @@ function invertAllColors() {
     }
 }
 
-// ---------- 5. Preview Backgrounds ----------
+// ---------- 5. Halftone ----------
+
+// Convert each selected solid-fill path into a vector halftone pattern
+// (grid of dots, squares, diamonds, or rows of lines).
+// Replaces the original path; pattern is clipped to the original silhouette.
+//
+//   dotSize   - max shape size in pt   (typ. 2-16)
+//   spacing   - center-to-center pitch (typ. dotSize * 1.5..2.5)
+//   shape     - 'circle' | 'square' | 'diamond' | 'line'
+//   angle     - grid rotation in degrees (0..90, classic DTF screen is 45)
+function applyHalftone(dotSize, spacing, shape, angle) {
+    try {
+        var doc = _doc();
+        var sel = doc.selection;
+        if (!sel || sel.length === 0) return _err("Select artwork first.");
+
+        dotSize = parseFloat(dotSize);   if (!(dotSize > 0)) dotSize = 6;
+        spacing = parseFloat(spacing);   if (!(spacing > 0)) spacing = dotSize * 2;
+        shape   = String(shape || "circle").toLowerCase();
+        if (shape !== "circle" && shape !== "square" && shape !== "diamond" && shape !== "line") {
+            shape = "circle";
+        }
+        angle = parseFloat(angle); if (isNaN(angle)) angle = 45;
+
+        // Floor on spacing so we don't blow up the path count
+        var minSpacing = Math.max(1.2, dotSize * 0.6);
+        if (spacing < minSpacing) spacing = minSpacing;
+
+        var rad = angle * Math.PI / 180;
+        var cos = Math.cos(rad);
+        var sin = Math.sin(rad);
+
+        // Gather all solid paths to process (handles groups + compound paths)
+        var targets = [];
+        for (var i = 0; i < sel.length; i++) {
+            var collected = _halftoneCollect(sel[i]);
+            for (var k = 0; k < collected.length; k++) targets.push(collected[k]);
+        }
+        if (targets.length === 0) return _err("Selection has no fillable paths.");
+
+        var totalDots = 0;
+        var pathsProcessed = 0;
+        for (var p = 0; p < targets.length; p++) {
+            var n = _halftoneOnePath(targets[p], dotSize, spacing, shape, cos, sin);
+            if (n > 0) { totalDots += n; pathsProcessed++; }
+        }
+
+        return _ok({
+            dotSize:        dotSize,
+            spacing:        spacing,
+            shape:          shape,
+            angle:          angle,
+            dotsCreated:    totalDots,
+            pathsProcessed: pathsProcessed
+        });
+    } catch (e) {
+        return _err("Halftone failed: " + (e.message || e));
+    }
+}
+
+// Walks selection, returning PathItems AND CompoundPathItems as units.
+// CompoundPathItems are kept whole so their inner holes stay holes.
+function _halftoneCollect(item) {
+    var out = [];
+    if (!item) return out;
+    var t = item.typename;
+    if (t === "PathItem" || t === "CompoundPathItem") {
+        out.push(item);
+    } else if (t === "GroupItem") {
+        for (var i = 0; i < item.pathItems.length; i++)         out.push(item.pathItems[i]);
+        for (var j = 0; j < item.compoundPathItems.length; j++) out.push(item.compoundPathItems[j]);
+        for (var k = 0; k < item.groupItems.length; k++) {
+            var nested = _halftoneCollect(item.groupItems[k]);
+            for (var n = 0; n < nested.length; n++) out.push(nested[n]);
+        }
+    }
+    return out;
+}
+
+function _halftoneOnePath(item, dotSize, spacing, shape, cos, sin) {
+    // Pick the path we read the fill color from (compound: first child path)
+    var colorSrc = item;
+    if (item.typename === "CompoundPathItem") {
+        if (item.pathItems.length === 0) return 0;
+        colorSrc = item.pathItems[0];
+    }
+    if (!colorSrc.filled || !_isRGBColor(colorSrc.fillColor)) return 0;
+
+    var c = colorSrc.fillColor;
+    // Perceptual darkness 0..1 (Rec.601 luma)
+    var lum = (0.299 * c.red + 0.587 * c.green + 0.114 * c.blue) / 255;
+    var darkness = 1 - lum;
+    if (darkness < 0.02) return 0; // skip near-white
+
+    var dotDiam = dotSize * darkness;
+    if (shape === "line") {
+        // For line halftone, "darkness" maps to stroke weight directly
+        if (dotDiam < 0.25) return 0;
+    } else {
+        if (dotDiam < 0.30) return 0;
+    }
+
+    var b = item.geometricBounds; // [left, top, right, bottom] (top > bottom)
+    var left = b[0], top = b[1], right = b[2], bottom = b[3];
+    var cx = (left + right) / 2;
+    var cy = (top + bottom) / 2;
+    var w  = right - left;
+    var h  = top - bottom;
+    var halfDiag = Math.sqrt(w * w + h * h) / 2 + spacing * 2;
+
+    var parent    = item.parent;
+    var fillColor = _makeRGB(c.red, c.green, c.blue);
+
+    var container = parent.groupItems.add();
+    container.name = "DTF_HALFTONE";
+
+    var nDots = 0;
+
+    if (shape === "line") {
+        // Horizontal stripes in the rotated frame
+        for (var ly = -halfDiag; ly <= halfDiag; ly += spacing) {
+            var x1L = -halfDiag, x2L = halfDiag;
+            var x1 = cx + (x1L * cos - ly * sin);
+            var y1 = cy + (x1L * sin + ly * cos);
+            var x2 = cx + (x2L * cos - ly * sin);
+            var y2 = cy + (x2L * sin + ly * cos);
+            var stripe = container.pathItems.add();
+            stripe.setEntirePath([[x1, y1], [x2, y2]]);
+            stripe.filled = false;
+            stripe.stroked = true;
+            stripe.strokeColor = fillColor;
+            stripe.strokeWidth = dotDiam;
+            nDots++;
+        }
+    } else {
+        // Grid of dots in rotated frame; cull far-out points before drawing
+        var margin = dotDiam + spacing;
+        for (var lyG = -halfDiag; lyG <= halfDiag; lyG += spacing) {
+            for (var lxG = -halfDiag; lxG <= halfDiag; lxG += spacing) {
+                var x = cx + (lxG * cos - lyG * sin);
+                var y = cy + (lxG * sin + lyG * cos);
+                if (x + margin < left || x - margin > right)   continue;
+                if (y + margin < bottom || y - margin > top)   continue;
+                _drawHalftoneDot(container, shape, x, y, dotDiam, fillColor);
+                nDots++;
+            }
+        }
+    }
+
+    if (nDots === 0) {
+        try { container.remove(); } catch (e) {}
+        return 0;
+    }
+
+    // Add the clipping silhouette LAST so it ends up topmost in the group's z-order
+    var clip = item.duplicate(container, ElementPlacement.PLACEATBEGINNING);
+    clip.clipping = true;
+    if (clip.typename === "PathItem") {
+        clip.filled  = false;
+        clip.stroked = false;
+    } else if (clip.typename === "CompoundPathItem") {
+        for (var ci = 0; ci < clip.pathItems.length; ci++) {
+            clip.pathItems[ci].filled  = false;
+            clip.pathItems[ci].stroked = false;
+        }
+    }
+    container.clipped = true;
+
+    // Put the new group where the original lived, then remove the original
+    try { container.move(item, ElementPlacement.PLACEBEFORE); } catch (eMv) {}
+    try { item.remove(); } catch (eRm) {}
+
+    return nDots;
+}
+
+function _drawHalftoneDot(parent, shape, x, y, diameter, color) {
+    var r = diameter / 2;
+    var item;
+    // pathItems.ellipse(top, left, width, height) — top is the upper Y edge
+    if (shape === "square") {
+        item = parent.pathItems.rectangle(y + r, x - r, diameter, diameter);
+    } else if (shape === "diamond") {
+        item = parent.pathItems.add();
+        item.setEntirePath([
+            [x,     y + r],
+            [x + r, y    ],
+            [x,     y - r],
+            [x - r, y    ]
+        ]);
+        item.closed = true;
+    } else { // circle (default)
+        item = parent.pathItems.ellipse(y + r, x - r, diameter, diameter);
+    }
+    item.stroked   = false;
+    item.filled    = true;
+    item.fillColor = color;
+    return item;
+}
+
+// ---------- 6. Preview Backgrounds ----------
 
 function addPreviewBackground(colorHex) {
     try {
@@ -389,7 +588,7 @@ function removePreviewBackground() {
     }
 }
 
-// ---------- 6. Export DTF PNG ----------
+// ---------- 7. Export DTF PNG ----------
 
 function exportDTF(widthCm, dpi, mirror) {
     try {
@@ -474,7 +673,7 @@ function _unmirror(doc) {
     }
 }
 
-// ---------- 7. Diagnostics ----------
+// ---------- 8. Diagnostics ----------
 
 function dtfPing() {
     try {

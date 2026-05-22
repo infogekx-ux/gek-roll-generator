@@ -131,6 +131,46 @@
     });
   });
 
+  // ---------- 3.5 Halftone ----------
+
+  var halftoneShape = $('halftoneShape');
+  var dotSlider     = $('dotSlider');
+  var dotVal        = $('dotVal');
+  var spacingSlider = $('spacingSlider');
+  var spacingVal    = $('spacingVal');
+  var angleSlider   = $('angleSlider');
+  var angleVal      = $('angleVal');
+
+  // Keep spacing >= dotSize so dots don't overlap by default.
+  // Bumps spacing along with dot size unless the user has dragged spacing past it.
+  var spacingTouched = false;
+  spacingSlider.addEventListener('input', function () {
+    spacingTouched = true;
+    spacingVal.textContent = spacingSlider.value;
+  });
+  dotSlider.addEventListener('input', function () {
+    dotVal.textContent = dotSlider.value;
+    var dot = parseInt(dotSlider.value, 10);
+    if (!spacingTouched || parseInt(spacingSlider.value, 10) < dot) {
+      spacingSlider.value = Math.max(parseInt(spacingSlider.value, 10), dot * 2);
+      spacingVal.textContent = spacingSlider.value;
+    }
+  });
+  angleSlider.addEventListener('input', function () {
+    angleVal.textContent = angleSlider.value;
+  });
+
+  $('btnHalftone').addEventListener('click', function () {
+    var dot     = parseInt(dotSlider.value, 10);
+    var spacing = parseInt(spacingSlider.value, 10);
+    var shape   = halftoneShape.value;
+    var angle   = parseInt(angleSlider.value, 10);
+    busy('Applying halftone (' + shape + ', ' + dot + 'pt)…');
+    callHost('applyHalftone', [dot, spacing, shape, angle], function (data) {
+      ok('Halftone: ' + data.dotsCreated + ' shapes on ' + data.pathsProcessed + ' paths');
+    });
+  });
+
   // ---------- 4. Preview ----------
 
   $('btnPrevBlack').addEventListener('click', function () {
