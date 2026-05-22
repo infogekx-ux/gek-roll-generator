@@ -94,14 +94,28 @@ function loadImage() {
         if (!f) return _err("Cancelled.");
         var placed = doc.placedItems.add();
         placed.file = f;
-        // Convert to embedded RasterItem for tracing
-        var raster = placed.embed();
-        // raster is no longer the placed item; refetch most recently added rasterItem
-        var rItem = doc.rasterItems[0];
-        var name = f.name;
-        var w = rItem.width;
-        var h = rItem.height;
-        return _ok({ name: name, width: Math.round(w), height: Math.round(h) });
+        // Marker so we can recover the embedded raster regardless of API variant
+        var marker = "DTF_LOAD_" + (new Date()).getTime();
+        try { placed.name = marker; } catch (eN) {}
+        var embedResult;
+        try { embedResult = placed.embed(); } catch (eE) {}
+
+        var rItem = null;
+        // Some Illustrator builds return the new raster from embed()
+        if (embedResult && typeof embedResult === "object" && embedResult.typename === "RasterItem") {
+            rItem = embedResult;
+        }
+        // Otherwise look up by preserved name
+        if (!rItem) {
+            for (var i = 0; i < doc.rasterItems.length; i++) {
+                if (doc.rasterItems[i].name === marker) { rItem = doc.rasterItems[i]; break; }
+            }
+        }
+        // Fallback: newly added items are at the front of the z-order
+        if (!rItem) rItem = doc.rasterItems[0];
+        if (!rItem) return _err("Embedded raster not found.");
+
+        return _ok({ name: f.name, width: Math.round(rItem.width), height: Math.round(rItem.height) });
     } catch (e) {
         return _err(e.message || e);
     }
@@ -151,6 +165,13 @@ function traceImage(preset, threshold) {
             opts.cornerFidelity = 75;
             opts.minimumArea = 5;
         }
+        // Force preview refresh and keep the traced object selected so
+        // expandAndUngroup() can act on it next.
+        try { app.redraw(); } catch (eR) {}
+        try {
+            app.activeDocument.selection = null;
+            traced.selected = true;
+        } catch (eS) {}
         return _ok({ preset: preset });
     } catch (e) {
         return _err(e.message || e);
@@ -162,9 +183,40 @@ function traceImage(preset, threshold) {
 function expandAndUngroup() {
     try {
         var doc = _doc();
-        // Expand: convert tracing to paths via menu command
-        try { app.executeMenuCommand("Live Trace/Convert to Paths"); }
-        catch (e1) { try { app.executeMenuCommand("expandStyle"); } catch (e2) {} }
+        var didExpand = false;
+        var expandMethod = "none";
+
+        // Strategy 1: Tracing.expandTracing() — documented, locale-independent.
+        // Any live-traced art lives as a PluginItem with a .tracing property.
+        try {
+            for (var p = doc.pluginItems.length - 1; p >= 0; p--) {
+                var pi = doc.pluginItems[p];
+                var trc = null;
+                try { trc = pi.tracing; } catch (eT) {}
+                if (trc) {
+                    try { trc.expandTracing(); didExpand = true; expandMethod = "expandTracing"; }
+                    catch (eE) {}
+                }
+            }
+        } catch (eP) {}
+
+        // Strategy 2: menu-command fallbacks. Internal command names are
+        // English regardless of UI locale (verified on AI PL/EN builds).
+        if (!didExpand) {
+            var cmds = [
+                "Live Trace/Expand",
+                "Live Trace/Make and Expand",
+                "expandStyle",
+                "expand"
+            ];
+            for (var c = 0; c < cmds.length; c++) {
+                try {
+                    app.executeMenuCommand(cmds[c]);
+                    didExpand = true; expandMethod = cmds[c];
+                    break;
+                } catch (eM) {}
+            }
+        }
 
         // Deep ungroup loop
         var safety = 50;
@@ -182,8 +234,11 @@ function expandAndUngroup() {
                 } catch (e) {}
             }
         }
-        var pathCount = doc.pathItems.length;
-        return _ok({ paths: pathCount });
+        return _ok({
+            paths: doc.pathItems.length,
+            expanded: didExpand,
+            method: expandMethod
+        });
     } catch (e) {
         return _err(e.message || e);
     }
