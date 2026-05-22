@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Start your DTFlow Pro subscription — €19.99/month.">
+<meta name="theme-color" content="#0A84FF">
+<title>Checkout — DTFlow</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230A84FF'/%3E%3Ctext x='50%25' y='58%25' font-family='Montserrat,sans-serif' font-size='18' font-weight='900' text-anchor='middle' fill='white'%3ED%3C/text%3E%3C/svg%3E">
+
+<style>
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+body { font-family: 'Montserrat', system-ui, -apple-system, "Segoe UI", sans-serif; color: #111827; background: #F9FAFB; line-height: 1.55; }
+a { color: #0A84FF; text-decoration: none; }
+a:hover { text-decoration: underline; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+:focus-visible { outline: 2px solid #0A84FF; outline-offset: 2px; border-radius: 4px; }
+
+:root {
+  --blue: #0A84FF;
+  --blue-dark: #0066D6;
+  --ink: #111827;
+  --ink-soft: #374151;
+  --muted: #6B7280;
+  --line: #E5E7EB;
+  --tile: #F3F4F6;
+  --tile-2: #F9FAFB;
+  --green: #10B981;
+  --red: #EF4444;
+  --radius: 14px;
+  --pill: 999px;
+  --shadow: 0 4px 24px rgba(17,24,39,.06);
+}
+
+.container { width: 100%; max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+/* ----- Top bar ----- */
+.bar {
+  background: #fff; border-bottom: 1px solid var(--line); padding: 18px 0;
+  position: sticky; top: 0; z-index: 10;
+}
+.bar-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.logo { font-weight: 900; font-size: 22px; letter-spacing: -.02em; color: var(--ink); }
+.logo .m { color: var(--blue); }
+.bar-meta { color: var(--muted); font-size: 13px; display: flex; gap: 18px; align-items: center; }
+.bar-meta .lock { display: inline-flex; gap: 6px; align-items: center; font-weight: 600; color: var(--ink-soft); }
+.bar-meta .lock svg { width: 13px; height: 13px; }
+@media (max-width: 600px) { .bar-meta .step-text { display: none; } }
+
+/* ----- Layout ----- */
+.wrap { padding: 40px 0 80px; }
+.head { margin-bottom: 32px; }
+.head h1 { font-size: clamp(28px, 4vw, 36px); font-weight: 900; letter-spacing: -.025em; }
+.head p { color: var(--muted); margin-top: 6px; font-size: 15px; }
+
+.grid {
+  display: grid; grid-template-columns: 1.4fr 1fr; gap: 32px;
+  align-items: start;
+}
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; gap: 24px; } }
+
+/* ----- Card ----- */
+.card {
+  background: #fff; border: 1px solid var(--line); border-radius: 16px;
+  padding: 28px; box-shadow: var(--shadow);
+}
+.card h2 { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1.4px; margin-bottom: 14px; }
+.card + .card { margin-top: 18px; }
+
+/* ----- Inputs ----- */
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.row-1 { display: block; margin-bottom: 12px; }
+.row-zip { display: grid; grid-template-columns: 1fr 2fr; gap: 12px; margin-bottom: 12px; }
+@media (max-width: 520px) { .row, .row-zip { grid-template-columns: 1fr; } }
+
+label.fld { display: block; }
+label .lbl-text { display: block; font-size: 11px; font-weight: 600; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px; }
+.opt { color: var(--muted); font-weight: 500; text-transform: none; letter-spacing: 0; }
+
+.input, .select {
+  width: 100%; background: #fff; border: 1px solid var(--line);
+  border-radius: 10px; padding: 12px 14px;
+  font-family: inherit; font-size: 14px; color: var(--ink);
+  transition: border-color .15s, box-shadow .15s;
+}
+.input:focus, .select:focus {
+  outline: none; border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(10,132,255,.18);
+}
+.input[disabled] { background: var(--tile); color: var(--muted); cursor: not-allowed; }
+
+.select {
+  appearance: none; -webkit-appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+                    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 16px) 18px, calc(100% - 12px) 18px;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 32px;
+  cursor: pointer;
+}
+
+.err-msg { display: none; color: var(--red); font-size: 12px; margin-top: 4px; font-weight: 600; }
+.fld.invalid .input, .fld.invalid .select { border-color: var(--red); }
+.fld.invalid .err-msg { display: block; }
+
+/* ----- Customer type radio ----- */
+.types {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px;
+}
+.type-opt {
+  position: relative; padding: 16px 18px; border: 1.5px solid var(--line);
+  border-radius: 12px; cursor: pointer; transition: all .15s ease;
+  display: flex; gap: 12px; align-items: center;
+}
+.type-opt:hover { border-color: #93C5FD; background: #F9FAFB; }
+.type-opt input { position: absolute; opacity: 0; pointer-events: none; }
+.type-opt .circle {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 1.5px solid #94A3B8; flex-shrink: 0; position: relative;
+  transition: all .15s;
+}
+.type-opt input:checked + .circle { border-color: var(--blue); }
+.type-opt input:checked + .circle::after {
+  content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--blue);
+}
+.type-opt:has(input:checked) { border-color: var(--blue); background: rgba(10,132,255,.04); }
+.type-opt .ti-title { font-weight: 700; font-size: 14px; color: var(--ink); }
+.type-opt .ti-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+#bizFields { display: none; }
+#bizFields.show { display: block; }
+
+/* ----- Promo ----- */
+.promo-row { display: flex; gap: 8px; }
+.promo-row .input { flex: 1; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+.promo-btn {
+  background: var(--ink); color: #fff;
+  padding: 12px 22px; border-radius: 10px;
+  font-weight: 700; font-size: 13px; letter-spacing: .6px; text-transform: uppercase;
+  transition: background .15s;
+  white-space: nowrap;
+}
+.promo-btn:hover:not(:disabled) { background: #1F2937; }
+.promo-btn:disabled { opacity: .5; cursor: not-allowed; }
+.promo-feedback { font-size: 13px; margin-top: 8px; font-weight: 600; min-height: 18px; }
+.promo-feedback.ok { color: var(--green); }
+.promo-feedback.err { color: var(--red); }
+
+/* ----- Summary ----- */
+.sum-card {
+  background: #fff; border: 1px solid var(--line); border-radius: 16px;
+  padding: 28px; box-shadow: var(--shadow);
+  position: sticky; top: 96px;
+}
+.sum-card h2 { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1.4px; margin-bottom: 18px; }
+.sum-product {
+  display: flex; gap: 14px; padding-bottom: 18px; border-bottom: 1px solid var(--line); margin-bottom: 16px;
+}
+.sum-product .ico {
+  width: 48px; height: 48px; flex-shrink: 0; border-radius: 10px;
+  background: linear-gradient(135deg, #0A84FF, #4F46E5);
+  display: grid; place-items: center; color: #fff; font-weight: 900; font-size: 18px;
+}
+.sum-product .pn { font-weight: 800; font-size: 15px; }
+.sum-product .pd { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+.sum-line {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 6px 0; font-size: 14px;
+}
+.sum-line .l { color: var(--muted); }
+.sum-line .v { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.sum-line.discount .v { color: var(--green); }
+.sum-line.note { font-size: 11px; color: var(--muted); font-style: italic; padding-top: 0; }
+.sum-divider { height: 1px; background: var(--line); margin: 8px 0; }
+.sum-total {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 14px 0 4px; border-top: 2px solid var(--ink); margin-top: 8px;
+}
+.sum-total .l { font-weight: 800; font-size: 15px; }
+.sum-total .v { font-weight: 900; font-size: 24px; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+
+.pay-btn {
+  width: 100%; background: var(--blue); color: #fff;
+  padding: 16px; border-radius: 12px;
+  font-weight: 700; font-size: 15px; letter-spacing: -.005em;
+  margin-top: 20px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  transition: background .2s, transform .15s, box-shadow .2s;
+  box-shadow: 0 8px 22px -6px rgba(10,132,255,.4);
+}
+.pay-btn:hover:not(:disabled) { background: var(--blue-dark); transform: translateY(-1px); }
+.pay-btn:disabled { opacity: .6; cursor: not-allowed; box-shadow: none; }
+.pay-btn svg { width: 16px; height: 16px; }
+.pay-note {
+  font-size: 12px; color: var(--muted); text-align: center; margin-top: 10px;
+  line-height: 1.5;
+}
+.pay-note strong { color: var(--ink-soft); }
+
+.trust-row {
+  display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+  margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line);
+}
+.trust-row span {
+  font-size: 11px; color: var(--muted); font-weight: 600;
+  display: inline-flex; gap: 5px; align-items: center;
+}
+.trust-row svg { width: 11px; height: 11px; }
+
+/* ----- Success banner ----- */
+.success {
+  display: none;
+  margin: 32px auto; max-width: 600px;
+  background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 14px;
+  padding: 32px; text-align: center;
+}
+.success.show { display: block; }
+.success .check {
+  width: 56px; height: 56px; margin: 0 auto 16px;
+  border-radius: 50%; background: var(--green); color: #fff;
+  display: grid; place-items: center;
+}
+.success .check svg { width: 28px; height: 28px; }
+.success h3 { font-size: 22px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 8px; }
+.success p { color: #065F46; font-size: 14px; line-height: 1.6; }
+.success .order-id { font-family: 'SF Mono', Menlo, Consolas, monospace; background: #fff; padding: 6px 10px; border-radius: 6px; display: inline-block; margin-top: 10px; font-size: 12px; }
+
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-inner">
+    <a href="index.html" class="logo"><span translate="no" class="notranslate">DT<span class="m">Flow</span></span></a>
+    <div class="bar-meta">
+      <span class="step-text">Checkout</span>
+      <span class="lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 11h14v9a1 1 0 01-1 1H6a1 1 0 01-1-1v-9z"/><path d="M8 11V7a4 4 0 118 0v4"/></svg> Secure</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap container">
+
+  <div id="successPanel" class="success">
+    <div class="check">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+    </div>
+    <h3>Order received!</h3>
+    <p>We've saved your details and will email you as soon as payment is enabled and the download is ready.<br>You'll get an invoice and the install link at the email you provided.</p>
+    <div class="order-id" id="orderIdBadge">—</div>
+  </div>
+
+  <div id="checkoutPanel">
+    <div class="head">
+      <h1>Start your <span translate="no" class="notranslate">DTFlow</span> Pro subscription</h1>
+      <p>7-day free trial · Cancel anytime · Instant download on payment</p>
+    </div>
+
+    <form id="form" novalidate>
+      <div class="grid">
+
+        <!-- LEFT: form -->
+        <div>
+
+          <!-- Customer type -->
+          <section class="card">
+            <h2>Customer type</h2>
+            <div class="types">
+              <label class="type-opt">
+                <input type="radio" name="customer_type" value="private" checked>
+                <span class="circle"></span>
+                <div>
+                  <div class="ti-title">Particulier</div>
+                  <div class="ti-sub">Private individual</div>
+                </div>
+              </label>
+              <label class="type-opt">
+                <input type="radio" name="customer_type" value="business">
+                <span class="circle"></span>
+                <div>
+                  <div class="ti-title">Zakelijk</div>
+                  <div class="ti-sub">Business / company</div>
+                </div>
+              </label>
+            </div>
+          </section>
+
+          <!-- Personal details -->
+          <section class="card">
+            <h2>Your details</h2>
+            <div class="row">
+              <label class="fld">
+                <span class="lbl-text">First name</span>
+                <input class="input" type="text" name="first_name" autocomplete="given-name" required>
+                <div class="err-msg">Required</div>
+              </label>
+              <label class="fld">
+                <span class="lbl-text">Last name</span>
+                <input class="input" type="text" name="last_name" autocomplete="family-name" required>
+                <div class="err-msg">Required</div>
+              </label>
+            </div>
+            <div class="row-1">
+              <label class="fld">
+                <span class="lbl-text">Email</span>
+                <input class="input" type="email" name="email" autocomplete="email" required>
+                <div class="err-msg">Valid email required</div>
+              </label>
+            </div>
+            <div class="row-1">
+              <label class="fld">
+                <span class="lbl-text">Phone <span class="opt">(optional)</span></span>
+                <input class="input" type="tel" name="phone" autocomplete="tel">
+              </label>
+            </div>
+          </section>
+
+          <!-- Address -->
+          <section class="card">
+            <h2>Billing address</h2>
+            <div class="row-1">
+              <label class="fld">
+                <span class="lbl-text">Country</span>
+                <select class="select" name="country" id="countrySel" required></select>
+                <div class="err-msg">Required</div>
+              </label>
+            </div>
+            <div class="row-1">
+              <label class="fld">
+                <span class="lbl-text">Street &amp; number</span>
+                <input class="input" type="text" name="street" autocomplete="street-address">
+              </label>
+            </div>
+            <div class="row-zip">
+              <label class="fld">
+                <span class="lbl-text">Postcode</span>
+                <input class="input" type="text" name="zip" autocomplete="postal-code">
+              </label>
+              <label class="fld">
+                <span class="lbl-text">City</span>
+                <input class="input" type="text" name="city" autocomplete="address-level2">
+              </label>
+            </div>
+          </section>
+
+          <!-- Business fields -->
+          <section class="card" id="bizFields">
+            <h2>Business details</h2>
+            <div class="row-1">
+              <label class="fld">
+                <span class="lbl-text">Company name</span>
+                <input class="input" type="text" name="company_name" autocomplete="organization">
+                <div class="err-msg">Required for business orders</div>
+              </label>
+            </div>
+            <div class="row">
+              <label class="fld">
+                <span class="lbl-text">Registration <span class="opt">(KvK / Reg.)</span></span>
+                <input class="input" type="text" name="registration_number">
+              </label>
+              <label class="fld">
+                <span class="lbl-text">VAT ID <span class="opt">(BTW-nummer)</span></span>
+                <input class="input" type="text" name="vat_id" style="text-transform: uppercase">
+                <div class="err-msg">Invalid VAT format</div>
+              </label>
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-top:8px;">
+              EU B2B with valid VAT ID from a country other than NL: VAT reverse charge applies (0%).
+            </div>
+          </section>
+
+          <!-- Promo -->
+          <section class="card">
+            <h2>Promo code</h2>
+            <div class="promo-row">
+              <input class="input" type="text" name="promo_code" id="promoInput" placeholder="LAUNCH20">
+              <button type="button" class="promo-btn" id="promoBtn">Apply</button>
+            </div>
+            <div class="promo-feedback" id="promoFeedback"></div>
+          </section>
+
+        </div>
+
+        <!-- RIGHT: summary -->
+        <aside>
+          <div class="sum-card">
+            <h2>Order summary</h2>
+            <div class="sum-product">
+              <div class="ico">D</div>
+              <div>
+                <div class="pn"><span translate="no" class="notranslate">DTFlow</span> Pro</div>
+                <div class="pd">Monthly subscription · €19.99 / month</div>
+              </div>
+            </div>
+
+            <div class="sum-line">
+              <span class="l"><span translate="no" class="notranslate">DTFlow</span> Pro</span>
+              <span class="v">€<span id="sumNet">19.99</span></span>
+            </div>
+            <div class="sum-line" id="sumVatRow">
+              <span class="l">VAT <span id="sumVatLabel">(21%)</span></span>
+              <span class="v">€<span id="sumVat">4.20</span></span>
+            </div>
+            <div class="sum-line discount" id="sumDiscountRow" style="display:none">
+              <span class="l">Discount <span id="sumDiscountCode"></span></span>
+              <span class="v">-€<span id="sumDiscount">0.00</span></span>
+            </div>
+            <div class="sum-line note" id="sumRcNote" style="display:none">
+              VAT reverse charge applied (EU B2B)
+            </div>
+
+            <div class="sum-total">
+              <span class="l">Total</span>
+              <span class="v">€<span id="sumTotal">24.19</span></span>
+            </div>
+
+            <button type="submit" class="pay-btn" id="payBtn" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 11h14v9a1 1 0 01-1 1H6a1 1 0 01-1-1v-9z"/><path d="M8 11V7a4 4 0 118 0v4"/></svg>
+              <span id="payBtnText">Pay now</span>
+            </button>
+            <div class="pay-note">
+              <strong>Payment coming soon</strong> — your order will be saved and we'll email you the moment checkout opens (within days).
+            </div>
+
+            <div class="trust-row">
+              <span><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg> SSL encrypted</span>
+              <span><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg> GDPR compliant</span>
+              <span><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg> Cancel anytime</span>
+            </div>
+          </div>
+        </aside>
+
+      </div>
+    </form>
+  </div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  // ============== Config ==============
+  // Edge function endpoint (Supabase). Falls back to local dev if you change it.
+  var SUPABASE_URL  = 'https://dkihhmphimfqhyuzajwc.supabase.co';
+  var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRraWhobXBoaW1mcWh5dXphandjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MzI0NzQsImV4cCI6MjA4NzEwODQ3NH0.ky8a6mcPzlRKZyit6JbuyCJ2ZA7KnH6h2mmzpzNmjsw';
+  var CHECKOUT_URL  = SUPABASE_URL + '/functions/v1/dtflow-checkout';
+  var PROMO_URL     = SUPABASE_URL + '/functions/v1/dtflow-checkout?op=promo';
+
+  // ============== VAT rates (EU 2024-2026, %) ==============
+  var VAT_RATES = {
+    NL: 21, DE: 19, BE: 21, FR: 20, AT: 20, IT: 22, ES: 21, PT: 23,
+    PL: 23, CZ: 21, SK: 20, HU: 27, RO: 19, BG: 20, HR: 25, SI: 22,
+    LT: 21, LV: 21, EE: 22, FI: 25.5, SE: 25, DK: 25, IE: 23, LU: 17,
+    MT: 18, CY: 19, GR: 24,
+    UK: 20,
+    US: 0, CA: 0, AU: 0,
+    OTHER: 0
+  };
+  var EU_COUNTRIES = ['NL','DE','BE','FR','AT','IT','ES','PT','PL','CZ','SK','HU','RO','BG','HR','SI','LT','LV','EE','FI','SE','DK','IE','LU','MT','CY','GR'];
+
+  // ============== Country list ==============
+  var COUNTRIES = [
+    ['NL','Netherlands'],['BE','Belgium'],['DE','Germany'],['FR','France'],['UK','United Kingdom'],
+    ['AT','Austria'],['IT','Italy'],['ES','Spain'],['PT','Portugal'],
+    ['PL','Poland'],['CZ','Czech Republic'],['SK','Slovakia'],['HU','Hungary'],['RO','Romania'],
+    ['BG','Bulgaria'],['HR','Croatia'],['SI','Slovenia'],['LT','Lithuania'],['LV','Latvia'],
+    ['EE','Estonia'],['FI','Finland'],['SE','Sweden'],['DK','Denmark'],['IE','Ireland'],
+    ['LU','Luxembourg'],['MT','Malta'],['CY','Cyprus'],['GR','Greece'],
+    ['US','United States'],['CA','Canada'],['AU','Australia'],['OTHER','Other']
+  ];
+
+  // ============== VAT ID validation (simple per-country regex) ==============
+  // Source: EU formats. Anything not in the table is accepted as "just looks plausible".
+  var VAT_REGEX = {
+    NL: /^NL[0-9]{9}B[0-9]{2}$/,
+    DE: /^DE[0-9]{9}$/,
+    BE: /^BE[0-9]{10}$/,
+    FR: /^FR[A-Z0-9]{2}[0-9]{9}$/,
+    AT: /^ATU[0-9]{8}$/,
+    IT: /^IT[0-9]{11}$/,
+    ES: /^ES[A-Z0-9][0-9]{7}[A-Z0-9]$/,
+    PT: /^PT[0-9]{9}$/,
+    PL: /^PL[0-9]{10}$/,
+    CZ: /^CZ[0-9]{8,10}$/,
+    SK: /^SK[0-9]{10}$/,
+    HU: /^HU[0-9]{8}$/,
+    RO: /^RO[0-9]{2,10}$/,
+    BG: /^BG[0-9]{9,10}$/,
+    HR: /^HR[0-9]{11}$/,
+    SI: /^SI[0-9]{8}$/,
+    LT: /^LT([0-9]{9}|[0-9]{12})$/,
+    LV: /^LV[0-9]{11}$/,
+    EE: /^EE[0-9]{9}$/,
+    FI: /^FI[0-9]{8}$/,
+    SE: /^SE[0-9]{12}$/,
+    DK: /^DK[0-9]{8}$/,
+    IE: /^IE[0-9A-Z\+\*]{7,9}$/,
+    LU: /^LU[0-9]{8}$/,
+    MT: /^MT[0-9]{8}$/,
+    CY: /^CY[0-9]{8}[A-Z]$/,
+    GR: /^(EL|GR)[0-9]{9}$/,
+    UK: /^GB([0-9]{9}|[0-9]{12}|GD[0-9]{3}|HA[0-9]{3})$/
+  };
+
+  // ============== DOM refs ==============
+  var $  = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+
+  var form         = $('#form');
+  var countrySel   = $('#countrySel');
+  var bizFields    = $('#bizFields');
+  var vatInput     = form.querySelector('[name=vat_id]');
+  var promoInput   = $('#promoInput');
+  var promoBtn     = $('#promoBtn');
+  var promoFb      = $('#promoFeedback');
+  var payBtn       = $('#payBtn');
+  var sumNet       = $('#sumNet');
+  var sumVat       = $('#sumVat');
+  var sumVatLabel  = $('#sumVatLabel');
+  var sumVatRow    = $('#sumVatRow');
+  var sumDiscount  = $('#sumDiscount');
+  var sumDiscountRow  = $('#sumDiscountRow');
+  var sumDiscountCode = $('#sumDiscountCode');
+  var sumRcNote    = $('#sumRcNote');
+  var sumTotal     = $('#sumTotal');
+
+  // ============== State ==============
+  var state = {
+    price_excl: 19.99,
+    customer_type: 'private',
+    country: 'NL',
+    vat_id: '',
+    vat_id_valid: false,
+    promo: null   // { code, discount_pct }
+  };
+
+  // ============== Country dropdown ==============
+  COUNTRIES.forEach(function (c) {
+    var opt = document.createElement('option');
+    opt.value = c[0]; opt.textContent = c[1];
+    if (c[0] === 'NL') opt.selected = true;
+    countrySel.appendChild(opt);
+  });
+
+  // ============== Listeners ==============
+  $$('input[name=customer_type]').forEach(function (r) {
+    r.addEventListener('change', function () {
+      state.customer_type = r.value;
+      bizFields.classList.toggle('show', r.value === 'business');
+      recalc();
+    });
+  });
+
+  countrySel.addEventListener('change', function () {
+    state.country = countrySel.value;
+    recalc();
+  });
+
+  vatInput.addEventListener('input', function () {
+    state.vat_id = vatInput.value.toUpperCase().replace(/\s+/g, '');
+    vatInput.value = state.vat_id;
+    var rx = VAT_REGEX[state.country];
+    state.vat_id_valid = rx ? rx.test(state.vat_id) : (state.vat_id.length >= 5);
+    vatInput.parentElement.classList.toggle('invalid', state.vat_id.length > 0 && !state.vat_id_valid);
+    recalc();
+  });
+
+  // ============== Promo apply ==============
+  promoBtn.addEventListener('click', function () {
+    var code = (promoInput.value || '').trim().toUpperCase();
+    promoInput.value = code;
+    if (!code) {
+      state.promo = null;
+      promoFb.className = 'promo-feedback';
+      promoFb.textContent = '';
+      recalc();
+      return;
+    }
+    promoBtn.disabled = true;
+    promoBtn.textContent = '…';
+    fetch(PROMO_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON },
+      body: JSON.stringify({ code: code })
+    }).then(function (r) { return r.json(); })
+      .then(function (j) {
+        promoBtn.disabled = false;
+        promoBtn.textContent = 'Apply';
+        if (j && j.ok && j.data && j.data.discount_pct != null) {
+          state.promo = { code: code, discount_pct: parseFloat(j.data.discount_pct) };
+          promoFb.className = 'promo-feedback ok';
+          promoFb.textContent = '✓  ' + state.promo.discount_pct + '% discount applied';
+        } else {
+          state.promo = null;
+          promoFb.className = 'promo-feedback err';
+          promoFb.textContent = '✗  ' + ((j && j.error) || 'Invalid or expired code');
+        }
+        recalc();
+      })
+      .catch(function (e) {
+        promoBtn.disabled = false;
+        promoBtn.textContent = 'Apply';
+        promoFb.className = 'promo-feedback err';
+        promoFb.textContent = '✗  Network error — try again';
+      });
+  });
+
+  // ============== VAT + total recalc ==============
+  function recalc() {
+    var net = state.price_excl;
+
+    // Determine VAT %
+    var rate = VAT_RATES[state.country];
+    if (rate == null) rate = 0;
+    var reverseCharge = false;
+    if (state.customer_type === 'business'
+        && state.country !== 'NL'
+        && EU_COUNTRIES.indexOf(state.country) !== -1
+        && state.vat_id_valid) {
+      rate = 0; reverseCharge = true;
+    }
+    var vatAmount = +(net * (rate / 100)).toFixed(2);
+
+    // Discount applied to NET only (standard practice in EU)
+    var discountPct = state.promo ? state.promo.discount_pct : 0;
+    var discountAmount = +(net * (discountPct / 100)).toFixed(2);
+
+    var netAfterDiscount = +(net - discountAmount).toFixed(2);
+    var vatAfterDiscount = +(netAfterDiscount * (rate / 100)).toFixed(2);
+    var total = +(netAfterDiscount + vatAfterDiscount).toFixed(2);
+
+    // UI
+    sumNet.textContent = net.toFixed(2);
+    sumVat.textContent = vatAfterDiscount.toFixed(2);
+    sumVatLabel.textContent = '(' + rate + '%)';
+    sumVatRow.style.display = (rate === 0 && !reverseCharge) ? 'none' : '';
+
+    if (discountPct > 0) {
+      sumDiscountRow.style.display = '';
+      sumDiscount.textContent = discountAmount.toFixed(2);
+      sumDiscountCode.textContent = '(' + state.promo.code + ')';
+    } else {
+      sumDiscountRow.style.display = 'none';
+    }
+
+    sumRcNote.style.display = reverseCharge ? '' : 'none';
+    sumTotal.textContent = total.toFixed(2);
+
+    // Persist for submission
+    state.calc = { rate: rate, vat_amount: vatAfterDiscount, discount_pct: discountPct, discount_amount: discountAmount, total: total, reverse_charge: reverseCharge };
+
+    validateForm();
+  }
+
+  // ============== Form validation ==============
+  function setInvalid(field, bad) {
+    field.parentElement.classList.toggle('invalid', !!bad);
+  }
+  function validateForm() {
+    var ok = true;
+    var required = ['first_name', 'last_name', 'email', 'country'];
+    required.forEach(function (n) {
+      var el = form.querySelector('[name=' + n + ']');
+      var bad = !el.value || (n === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value));
+      setInvalid(el, bad);
+      if (bad) ok = false;
+    });
+    if (state.customer_type === 'business') {
+      var cn = form.querySelector('[name=company_name]');
+      if (!cn.value) { setInvalid(cn, true); ok = false; } else setInvalid(cn, false);
+      // vat_id is optional but if filled, must be valid for the country
+      if (state.vat_id && !state.vat_id_valid) ok = false;
+    }
+    payBtn.disabled = !ok;
+    return ok;
+  }
+  form.addEventListener('input', validateForm);
+  form.addEventListener('change', validateForm);
+
+  // ============== Submit ==============
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!validateForm()) return;
+    var fd = new FormData(form);
+    var payload = {};
+    fd.forEach(function (v, k) { payload[k] = v; });
+    payload.promo_code = state.promo ? state.promo.code : null;
+    payload.calc = state.calc;
+
+    payBtn.disabled = true;
+    var oldText = $('#payBtnText').textContent;
+    $('#payBtnText').textContent = 'Saving…';
+
+    fetch(CHECKOUT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON },
+      body: JSON.stringify(payload)
+    }).then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j && j.ok && j.data && j.data.order_id) {
+          $('#orderIdBadge').textContent = 'Order ID: ' + j.data.order_id;
+          $('#checkoutPanel').style.display = 'none';
+          $('#successPanel').classList.add('show');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          $('#payBtnText').textContent = oldText;
+          payBtn.disabled = false;
+          alert('Could not save order: ' + ((j && j.error) || 'Unknown error') + '\n\nPlease try again or email info@gek-x.nl.');
+        }
+      })
+      .catch(function () {
+        $('#payBtnText').textContent = oldText;
+        payBtn.disabled = false;
+        alert('Network error. Please try again or email info@gek-x.nl.');
+      });
+  });
+
+  // initial
+  recalc();
+})();
+</script>
+</body>
+</html>

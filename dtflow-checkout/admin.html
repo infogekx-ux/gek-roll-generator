@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>DTFlow Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230A84FF'/%3E%3Ctext x='50%25' y='58%25' font-family='Montserrat,sans-serif' font-size='18' font-weight='900' text-anchor='middle' fill='white'%3ED%3C/text%3E%3C/svg%3E">
+<style>
+*,*::before,*::after { box-sizing: border-box; margin:0; padding:0; }
+html, body { background: #000; color: #E5E7EB; font-family: 'Montserrat', system-ui, sans-serif; font-size: 13px; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+body { line-height: 1.5; }
+a { color: #60A5FA; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+
+:root {
+  --bg: #000;
+  --panel: #0F172A;
+  --panel-2: #111827;
+  --line: #1F2937;
+  --line-2: #374151;
+  --muted: #9CA3AF;
+  --muted-2: #6B7280;
+  --blue: #0A84FF;
+  --green: #10B981;
+  --red: #EF4444;
+  --orange: #F59E0B;
+}
+
+/* ============== PIN gate ============== */
+#pinGate {
+  position: fixed; inset: 0; z-index: 1000;
+  background: #000;
+  display: grid; place-items: center;
+}
+#pinGate .box {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 18px; padding: 40px;
+  width: 100%; max-width: 360px; text-align: center;
+}
+#pinGate h1 { font-weight: 900; font-size: 24px; letter-spacing: -.02em; }
+#pinGate .l { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 16px; font-weight: 700; }
+#pinGate input {
+  background: #000; color: #fff; border: 1px solid var(--line-2);
+  border-radius: 12px; padding: 16px; font-size: 24px; text-align: center;
+  font-weight: 800; letter-spacing: 14px;
+  width: 100%; margin-top: 10px;
+  font-family: inherit;
+}
+#pinGate input:focus { outline: none; border-color: var(--blue); }
+#pinGate button {
+  background: var(--blue); color: #fff; padding: 14px;
+  border-radius: 12px; font-weight: 700; font-size: 14px;
+  width: 100%; margin-top: 14px;
+}
+#pinGate button:hover { background: #0066D6; }
+#pinErr { color: var(--red); font-size: 12px; min-height: 16px; margin-top: 8px; font-weight: 600; }
+
+/* ============== Layout ============== */
+#app { display: none; }
+.bar {
+  background: #000; border-bottom: 1px solid var(--line);
+  padding: 14px 0; position: sticky; top: 0; z-index: 10;
+  backdrop-filter: blur(20px); background: rgba(0,0,0,.8);
+}
+.bar-inner {
+  max-width: 1280px; margin: 0 auto; padding: 0 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.logo { font-weight: 900; font-size: 20px; letter-spacing: -.02em; }
+.logo .m { color: var(--blue); }
+.logo .admin { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-left: 8px; vertical-align: middle; }
+.bar-right { display: flex; gap: 14px; align-items: center; font-size: 12px; color: var(--muted); }
+.bar-right .logout { color: var(--muted); cursor: pointer; }
+.bar-right .logout:hover { color: var(--red); }
+
+.container { max-width: 1280px; margin: 0 auto; padding: 24px; }
+
+/* ============== Stat cards ============== */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+@media (max-width: 900px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+.stat {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  padding: 18px 20px;
+}
+.stat .l { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 700; }
+.stat .v { font-weight: 900; font-size: 26px; letter-spacing: -.02em; color: #fff; margin-top: 6px; font-variant-numeric: tabular-nums; }
+.stat .sub { font-size: 11px; color: var(--muted-2); margin-top: 4px; }
+.stat.revenue .v { color: var(--green); }
+.stat.pending .v { color: var(--orange); }
+
+/* ============== Tabs ============== */
+.tabs { display: flex; gap: 4px; margin-bottom: 18px; border-bottom: 1px solid var(--line); }
+.tab {
+  padding: 10px 18px; font-weight: 600; font-size: 13px;
+  color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent;
+  transition: color .15s, border-color .15s;
+}
+.tab:hover { color: #fff; }
+.tab.active { color: #fff; border-bottom-color: var(--blue); }
+
+.pane { display: none; }
+.pane.active { display: block; }
+
+/* ============== Toolbar ============== */
+.toolbar {
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  margin-bottom: 14px;
+}
+.toolbar input, .toolbar select {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 9px 12px; color: #fff;
+  font-family: inherit; font-size: 13px; outline: none;
+}
+.toolbar input:focus, .toolbar select:focus { border-color: var(--blue); }
+.toolbar input { min-width: 240px; }
+.toolbar .seg {
+  display: flex; gap: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
+}
+.toolbar .seg button {
+  padding: 9px 14px; font-size: 12px; font-weight: 600; color: var(--muted);
+  border-right: 1px solid var(--line);
+}
+.toolbar .seg button:last-child { border-right: none; }
+.toolbar .seg button.on { background: var(--blue); color: #fff; }
+.toolbar .spacer { flex: 1; }
+.toolbar .count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* ============== Tables ============== */
+.table-wrap {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+}
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th {
+  background: #000; color: var(--muted);
+  text-align: left; padding: 12px 14px;
+  font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+tbody td {
+  padding: 12px 14px; border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+tbody tr { transition: background .12s; cursor: pointer; }
+tbody tr:hover { background: rgba(255,255,255,.02); }
+tbody tr:last-child td { border-bottom: none; }
+td.money { font-variant-numeric: tabular-nums; font-weight: 600; color: #fff; }
+td.email { color: var(--muted); }
+td.muted { color: var(--muted); font-size: 12px; }
+td.actions { white-space: nowrap; }
+
+.pill {
+  display: inline-block; padding: 3px 9px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+}
+.pill.paid    { background: rgba(16,185,129,.15); color: var(--green); }
+.pill.pending { background: rgba(245,158,11,.15); color: var(--orange); }
+.pill.failed  { background: rgba(239,68,68,.15);  color: var(--red); }
+.pill.refunded{ background: rgba(156,163,175,.15);color: var(--muted); }
+.pill.delivered { background: rgba(10,132,255,.15); color: var(--blue); }
+.pill.b2b { background: rgba(124,58,237,.18); color: #C4B5FD; }
+.pill.b2c { background: rgba(255,255,255,.06); color: var(--muted); }
+
+.btn-sm {
+  padding: 6px 10px; border-radius: 7px;
+  font-size: 11px; font-weight: 700;
+  background: var(--line); color: #fff; transition: background .12s;
+  margin-right: 4px;
+}
+.btn-sm:hover { background: var(--line-2); }
+.btn-sm.paid    { background: rgba(16,185,129,.15); color: var(--green); }
+.btn-sm.paid:hover    { background: rgba(16,185,129,.25); }
+.btn-sm.deliver { background: rgba(10,132,255,.15); color: var(--blue); }
+.btn-sm.deliver:hover { background: rgba(10,132,255,.25); }
+
+.empty {
+  padding: 60px 20px; text-align: center; color: var(--muted-2);
+  font-size: 13px;
+}
+
+/* ============== Modal ============== */
+.modal-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 100;
+  display: none; align-items: center; justify-content: center; padding: 24px;
+  backdrop-filter: blur(4px);
+}
+.modal-bg.show { display: flex; }
+.modal {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+  max-width: 640px; width: 100%; max-height: 90vh; overflow-y: auto;
+  padding: 28px;
+}
+.modal h3 { font-size: 16px; font-weight: 800; margin-bottom: 6px; color: #fff; }
+.modal .sub { color: var(--muted); font-size: 12px; margin-bottom: 22px; }
+.modal-grid { display: grid; grid-template-columns: 140px 1fr; gap: 12px 16px; }
+.modal-grid dt { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; padding-top: 2px; }
+.modal-grid dd { color: #fff; font-size: 13px; word-break: break-word; }
+.modal-grid dd.money { font-weight: 700; }
+.modal .actions {
+  margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line);
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+.modal .actions button {
+  padding: 10px 18px; border-radius: 8px; font-weight: 700; font-size: 13px;
+  background: var(--line); color: #fff;
+}
+.modal .actions .close { margin-left: auto; }
+.modal .actions .deliver { background: var(--blue); }
+.modal .actions .deliver:hover { background: #0066D6; }
+.modal .actions .mark-paid { background: var(--green); }
+.modal .actions .mark-paid:hover { background: #0A9C6A; }
+
+/* ============== Promo pane ============== */
+.promo-form {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  padding: 20px; margin-bottom: 18px;
+}
+.promo-form h3 { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 14px; }
+.promo-form .row { display: grid; grid-template-columns: 1fr 100px 110px 180px auto; gap: 10px; align-items: end; }
+@media (max-width: 760px) { .promo-form .row { grid-template-columns: 1fr 1fr; } }
+.promo-form label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .8px; font-weight: 600; }
+.promo-form input {
+  width: 100%; background: #000; border: 1px solid var(--line);
+  border-radius: 8px; padding: 9px 12px; color: #fff;
+  font-family: inherit; font-size: 13px; outline: none;
+}
+.promo-form input:focus { border-color: var(--blue); }
+.promo-form .add-btn {
+  background: var(--blue); color: #fff;
+  padding: 9px 18px; border-radius: 8px;
+  font-weight: 700; font-size: 13px;
+}
+.promo-form .add-btn:hover { background: #0066D6; }
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 10px; padding: 12px 18px;
+  font-size: 13px; font-weight: 600;
+  box-shadow: 0 16px 32px rgba(0,0,0,.4);
+  transform: translateY(100px); opacity: 0;
+  transition: transform .2s, opacity .2s;
+  z-index: 200;
+}
+.toast.show { transform: none; opacity: 1; }
+.toast.ok  { border-color: var(--green); color: var(--green); }
+.toast.err { border-color: var(--red); color: var(--red); }
+
+</style>
+</head>
+<body>
+
+<!-- PIN gate -->
+<div id="pinGate">
+  <div class="box">
+    <h1><span translate="no" class="notranslate">DT<span style="color:#0A84FF">Flow</span></span> Admin</h1>
+    <div class="l">Enter PIN</div>
+    <input type="password" id="pinInput" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off">
+    <div id="pinErr"></div>
+    <button id="pinBtn">Unlock</button>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app">
+
+  <header class="bar">
+    <div class="bar-inner">
+      <div class="logo">
+        <span translate="no" class="notranslate">DT<span class="m">Flow</span></span>
+        <span class="admin">Admin</span>
+      </div>
+      <div class="bar-right">
+        <span id="lastRefresh"></span>
+        <button class="logout" id="logoutBtn">Lock</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat"><div class="l">Total orders</div><div class="v" id="statTotal">—</div><div class="sub">all time</div></div>
+      <div class="stat"><div class="l">Paid</div><div class="v" id="statPaid">—</div><div class="sub" id="statPaidSub">—</div></div>
+      <div class="stat pending"><div class="l">Pending</div><div class="v" id="statPending">—</div><div class="sub">awaiting payment</div></div>
+      <div class="stat revenue"><div class="l">Revenue</div><div class="v">€<span id="statRevenue">—</span></div><div class="sub" id="statRevenueSub">total incl. VAT</div></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" data-tab="orders">Orders</div>
+      <div class="tab" data-tab="promos">Promo codes</div>
+    </div>
+
+    <!-- Orders pane -->
+    <div class="pane active" data-pane="orders">
+      <div class="toolbar">
+        <input type="text" id="searchInput" placeholder="Search name or email…">
+        <div class="seg" id="filterSeg">
+          <button class="on" data-f="all">All</button>
+          <button data-f="paid">Paid</button>
+          <button data-f="pending">Pending</button>
+          <button data-f="undelivered">Undelivered</button>
+        </div>
+        <div class="spacer"></div>
+        <div class="count" id="rowCount">—</div>
+      </div>
+      <div class="table-wrap">
+        <table id="ordersTable">
+          <thead><tr>
+            <th>Date</th><th>Name</th><th>Email</th><th>Country</th><th>Type</th>
+            <th>Total</th><th>Status</th><th>Promo</th><th>Delivered</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="ordersBody">
+            <tr><td colspan="10" class="empty">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Promos pane -->
+    <div class="pane" data-pane="promos">
+      <div class="promo-form">
+        <h3>Add new promo</h3>
+        <form id="promoForm">
+          <div class="row">
+            <div><label>Code</label><input type="text" name="code" required placeholder="LAUNCH30" style="text-transform:uppercase;letter-spacing:.5px;font-weight:600"></div>
+            <div><label>Discount %</label><input type="number" name="discount_pct" required min="1" max="100" step="1" placeholder="20"></div>
+            <div><label>Max uses</label><input type="number" name="max_uses" min="1" placeholder="∞"></div>
+            <div><label>Valid until</label><input type="date" name="valid_until"></div>
+            <div><button type="submit" class="add-btn">Add code</button></div>
+          </div>
+        </form>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Code</th><th>Discount</th><th>Used / Max</th><th>Valid until</th><th>Status</th><th>Created</th><th></th>
+          </tr></thead>
+          <tbody id="promosBody">
+            <tr><td colspan="7" class="empty">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Detail modal -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3 id="modalTitle">Order detail</h3>
+    <div class="sub" id="modalSub"></div>
+    <dl class="modal-grid" id="modalGrid"></dl>
+    <div class="actions">
+      <button class="mark-paid" id="actMarkPaid">Mark as paid</button>
+      <button class="deliver"   id="actDeliver">Deliver (send email)</button>
+      <button class="close"     id="actClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // =========== Config ===========
+  var SUPABASE_URL  = 'https://dkihhmphimfqhyuzajwc.supabase.co';
+  var SERVICE_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRraWhobXBoaW1mcWh5dXphandjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTUzMjQ3NCwiZXhwIjoyMDg3MTA4NDc0fQ.PX-XYXw0ttqlqYLSj3z8VKhqbqBsyAa9wWCZY7w5PtQ';
+  var REST_BASE     = SUPABASE_URL + '/rest/v1';
+  var DELIVER_URL   = SUPABASE_URL + '/functions/v1/dtflow-deliver';
+  var PIN           = '2407';
+
+  // =========== State ===========
+  var orders = [];
+  var promos = [];
+  var filter = 'all';
+  var search = '';
+  var currentOrder = null;
+
+  var $ = function (s) { return document.querySelector(s); };
+  var $$ = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
+
+  function api(path, opts) {
+    opts = opts || {};
+    opts.headers = Object.assign({
+      'apikey': SERVICE_KEY,
+      'Authorization': 'Bearer ' + SERVICE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    }, opts.headers || {});
+    return fetch(REST_BASE + path, opts).then(function (r) {
+      if (!r.ok) return r.text().then(function (t) { throw new Error(r.status + ': ' + t); });
+      return r.status === 204 ? null : r.json();
+    });
+  }
+
+  function toast(msg, kind) {
+    var t = $('#toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + (kind || 'ok');
+    setTimeout(function () { t.className = 'toast ' + (kind || 'ok'); }, 2800);
+  }
+
+  // =========== PIN gate ===========
+  function unlock() {
+    if (sessionStorage.getItem('dtflow_admin_ok') === '1') return show();
+    var pin = $('#pinInput').value;
+    if (pin === PIN) {
+      sessionStorage.setItem('dtflow_admin_ok', '1');
+      show();
+    } else {
+      $('#pinErr').textContent = 'Incorrect PIN';
+      $('#pinInput').value = '';
+      $('#pinInput').focus();
+    }
+  }
+  function show() {
+    $('#pinGate').style.display = 'none';
+    $('#app').style.display = '';
+    load();
+  }
+  $('#pinBtn').addEventListener('click', unlock);
+  $('#pinInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') unlock(); });
+  $('#pinInput').focus();
+  if (sessionStorage.getItem('dtflow_admin_ok') === '1') show();
+
+  $('#logoutBtn').addEventListener('click', function () {
+    sessionStorage.removeItem('dtflow_admin_ok');
+    location.reload();
+  });
+
+  // =========== Load ===========
+  function load() {
+    Promise.all([
+      api('/dtflow_orders?select=*&order=created_at.desc'),
+      api('/dtflow_promos?select=*&order=created_at.desc')
+    ]).then(function (r) {
+      orders = r[0] || [];
+      promos = r[1] || [];
+      render();
+      $('#lastRefresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
+    }).catch(function (e) {
+      toast('Load failed: ' + e.message, 'err');
+    });
+  }
+
+  // =========== Render: stats + orders + promos ===========
+  function render() {
+    var total = orders.length;
+    var paid = orders.filter(function (o) { return o.payment_status === 'paid'; });
+    var pending = orders.filter(function (o) { return o.payment_status === 'pending'; });
+    var revenue = paid.reduce(function (s, o) { return s + parseFloat(o.total_incl || 0); }, 0);
+    var paidRev = paid.reduce(function (s, o) { return s + parseFloat(o.total_incl || 0); }, 0);
+
+    $('#statTotal').textContent = total;
+    $('#statPaid').textContent = paid.length;
+    $('#statPaidSub').textContent = '€' + paidRev.toFixed(2) + ' total';
+    $('#statPending').textContent = pending.length;
+    $('#statRevenue').textContent = revenue.toFixed(2);
+    $('#statRevenueSub').textContent = paid.length + ' paid orders';
+
+    renderOrders();
+    renderPromos();
+  }
+
+  function renderOrders() {
+    var rows = orders.filter(function (o) {
+      if (filter === 'paid'        && o.payment_status !== 'paid')    return false;
+      if (filter === 'pending'     && o.payment_status !== 'pending') return false;
+      if (filter === 'undelivered' && o.delivered)                    return false;
+      if (search) {
+        var s = search.toLowerCase();
+        var hay = ((o.first_name || '') + ' ' + (o.last_name || '') + ' ' + (o.email || '') + ' ' + (o.company_name || '')).toLowerCase();
+        if (hay.indexOf(s) === -1) return false;
+      }
+      return true;
+    });
+    $('#rowCount').textContent = rows.length + ' of ' + orders.length;
+
+    var body = $('#ordersBody');
+    if (rows.length === 0) {
+      body.innerHTML = '<tr><td colspan="10" class="empty">No orders match.</td></tr>';
+      return;
+    }
+    body.innerHTML = rows.map(function (o) {
+      var name = escapeHtml((o.first_name || '') + ' ' + (o.last_name || ''));
+      if (o.company_name) name += '<br><span class="muted" style="font-size:11px">' + escapeHtml(o.company_name) + '</span>';
+      var type = o.customer_type === 'business'
+        ? '<span class="pill b2b">B2B</span>'
+        : '<span class="pill b2c">B2C</span>';
+      var status = '<span class="pill ' + o.payment_status + '">' + o.payment_status + '</span>';
+      var delivered = o.delivered ? '<span class="pill delivered">sent</span>' : '<span class="muted" style="font-size:11px">no</span>';
+      return '<tr data-id="' + o.id + '">'
+        + '<td class="muted">' + formatDate(o.created_at) + '</td>'
+        + '<td>' + name + '</td>'
+        + '<td class="email">' + escapeHtml(o.email) + '</td>'
+        + '<td>' + escapeHtml(o.country) + '</td>'
+        + '<td>' + type + '</td>'
+        + '<td class="money">€' + parseFloat(o.total_incl || 0).toFixed(2) + '</td>'
+        + '<td>' + status + '</td>'
+        + '<td>' + (o.promo_code ? '<code style="font-size:11px;color:#A5B4FC;font-weight:600">' + escapeHtml(o.promo_code) + '</code>' : '<span class="muted">—</span>') + '</td>'
+        + '<td>' + delivered + '</td>'
+        + '<td class="actions">'
+          + (o.payment_status !== 'paid' ? '<button class="btn-sm paid" data-act="paid" data-id="' + o.id + '">Mark paid</button>' : '')
+          + '<button class="btn-sm deliver" data-act="deliver" data-id="' + o.id + '">Deliver</button>'
+        + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  function renderPromos() {
+    var body = $('#promosBody');
+    if (promos.length === 0) {
+      body.innerHTML = '<tr><td colspan="7" class="empty">No promo codes yet.</td></tr>';
+      return;
+    }
+    body.innerHTML = promos.map(function (p) {
+      var maxLabel = p.max_uses == null ? '∞' : p.max_uses;
+      var validUntil = p.valid_until ? formatDate(p.valid_until) : '—';
+      var status = p.active
+        ? '<span class="pill paid">Active</span>'
+        : '<span class="pill refunded">Inactive</span>';
+      return '<tr data-id="' + p.id + '">'
+        + '<td><code style="font-weight:700;color:#fff">' + escapeHtml(p.code) + '</code></td>'
+        + '<td class="money">' + parseFloat(p.discount_pct) + '%</td>'
+        + '<td>' + p.used_count + ' / ' + maxLabel + '</td>'
+        + '<td class="muted">' + validUntil + '</td>'
+        + '<td>' + status + '</td>'
+        + '<td class="muted">' + formatDate(p.created_at) + '</td>'
+        + '<td class="actions"><button class="btn-sm" data-promo-toggle="' + p.id + '">' + (p.active ? 'Deactivate' : 'Activate') + '</button></td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  // =========== Helpers ===========
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function formatDate(s) {
+    if (!s) return '—';
+    var d = new Date(s);
+    return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  }
+
+  // =========== Tabs ===========
+  $$('.tab').forEach(function (t) {
+    t.addEventListener('click', function () {
+      $$('.tab').forEach(function (x) { x.classList.remove('active'); });
+      $$('.pane').forEach(function (x) { x.classList.remove('active'); });
+      t.classList.add('active');
+      document.querySelector('[data-pane=' + t.dataset.tab + ']').classList.add('active');
+    });
+  });
+
+  // =========== Search + filter ===========
+  $('#searchInput').addEventListener('input', function () {
+    search = $('#searchInput').value;
+    renderOrders();
+  });
+  $('#filterSeg').addEventListener('click', function (e) {
+    if (e.target.matches('button')) {
+      $$('#filterSeg button').forEach(function (b) { b.classList.remove('on'); });
+      e.target.classList.add('on');
+      filter = e.target.dataset.f;
+      renderOrders();
+    }
+  });
+
+  // =========== Click row -> modal | row action ===========
+  $('#ordersBody').addEventListener('click', function (e) {
+    var t = e.target;
+    var actBtn = t.closest('[data-act]');
+    if (actBtn) {
+      e.stopPropagation();
+      var id = actBtn.dataset.id;
+      var act = actBtn.dataset.act;
+      if (act === 'paid')    markPaid(id);
+      if (act === 'deliver') deliver(id);
+      return;
+    }
+    var tr = t.closest('tr[data-id]');
+    if (tr) openModal(tr.dataset.id);
+  });
+
+  function openModal(id) {
+    var o = orders.find(function (x) { return x.id === id; });
+    if (!o) return;
+    currentOrder = o;
+    $('#modalTitle').textContent = ((o.first_name || '') + ' ' + (o.last_name || '')).trim() || o.email;
+    $('#modalSub').textContent = formatDate(o.created_at) + ' · Order ' + o.id.substring(0, 8);
+    var fields = [
+      ['Email', o.email],
+      ['Phone', o.phone || '—'],
+      ['Type', o.customer_type === 'business' ? 'Business' : 'Private'],
+      ['Country', o.country],
+      ['Address', [o.street, o.zip, o.city].filter(Boolean).join(', ') || '—']
+    ];
+    if (o.customer_type === 'business') {
+      fields.push(['Company', o.company_name || '—']);
+      fields.push(['Registration', o.registration_number || '—']);
+      fields.push(['VAT ID', o.vat_id || '—']);
+    }
+    fields = fields.concat([
+      ['Plan', o.plan + ' · €' + parseFloat(o.price_excl || 0).toFixed(2) + '/mo'],
+      ['VAT', (o.vat_pct || 0) + '% · €' + parseFloat(o.vat_amount || 0).toFixed(2) + (o.reverse_charge ? ' (reverse charge)' : '')],
+      ['Discount', o.promo_code ? o.promo_code + ' · -€' + parseFloat(o.discount_amount || 0).toFixed(2) + ' (' + parseFloat(o.discount_pct || 0) + '%)' : '—'],
+      ['Total', '€' + parseFloat(o.total_incl || 0).toFixed(2)],
+      ['Status', o.payment_status],
+      ['Delivered', o.delivered ? 'Yes · ' + formatDate(o.delivered_at) : 'No'],
+      ['Download token', o.download_token]
+    ]);
+    $('#modalGrid').innerHTML = fields.map(function (f) {
+      return '<dt>' + f[0] + '</dt><dd' + (f[0] === 'Total' ? ' class="money"' : '') + '>' + escapeHtml(f[1] || '—') + '</dd>';
+    }).join('');
+    $('#actMarkPaid').style.display = (o.payment_status === 'paid') ? 'none' : '';
+    $('#modalBg').classList.add('show');
+  }
+  $('#actClose').addEventListener('click', function () { $('#modalBg').classList.remove('show'); });
+  $('#modalBg').addEventListener('click', function (e) { if (e.target === $('#modalBg')) $('#modalBg').classList.remove('show'); });
+  $('#actMarkPaid').addEventListener('click', function () { if (currentOrder) markPaid(currentOrder.id); });
+  $('#actDeliver').addEventListener('click', function () { if (currentOrder) deliver(currentOrder.id); });
+
+  // =========== Actions ===========
+  function markPaid(id) {
+    api('/dtflow_orders?id=eq.' + id, {
+      method: 'PATCH',
+      body: JSON.stringify({ payment_status: 'paid' })
+    }).then(function (rows) {
+      toast('Marked as paid', 'ok');
+      load();
+      if (currentOrder && currentOrder.id === id) $('#modalBg').classList.remove('show');
+    }).catch(function (e) { toast('Failed: ' + e.message, 'err'); });
+  }
+
+  function deliver(id) {
+    fetch(DELIVER_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SERVICE_KEY,
+        'Authorization': 'Bearer ' + SERVICE_KEY
+      },
+      body: JSON.stringify({ order_id: id })
+    }).then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j && j.ok) {
+          toast('Delivery email sent', 'ok');
+          load();
+          if (currentOrder && currentOrder.id === id) $('#modalBg').classList.remove('show');
+        } else {
+          toast('Delivery failed: ' + ((j && j.error) || 'unknown'), 'err');
+        }
+      })
+      .catch(function (e) { toast('Delivery failed: ' + e.message, 'err'); });
+  }
+
+  // =========== Promo CRUD ===========
+  $('#promoForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var fd = new FormData(e.target);
+    var payload = {
+      code: (fd.get('code') || '').toUpperCase().trim(),
+      discount_pct: parseFloat(fd.get('discount_pct')),
+      max_uses: fd.get('max_uses') ? parseInt(fd.get('max_uses'), 10) : null,
+      valid_until: fd.get('valid_until') || null,
+      active: true
+    };
+    if (!payload.code || !payload.discount_pct) return;
+    api('/dtflow_promos', {
+      method: 'POST', body: JSON.stringify(payload)
+    }).then(function () {
+      toast('Promo added', 'ok');
+      e.target.reset();
+      load();
+    }).catch(function (err) {
+      toast('Add failed: ' + (err.message.indexOf('duplicate') !== -1 ? 'code already exists' : err.message), 'err');
+    });
+  });
+
+  $('#promosBody').addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-promo-toggle]');
+    if (!btn) return;
+    var id = btn.dataset.promoToggle;
+    var p = promos.find(function (x) { return x.id === id; });
+    if (!p) return;
+    api('/dtflow_promos?id=eq.' + id, {
+      method: 'PATCH',
+      body: JSON.stringify({ active: !p.active })
+    }).then(function () {
+      toast(p.active ? 'Deactivated' : 'Activated', 'ok');
+      load();
+    }).catch(function (err) { toast('Failed: ' + err.message, 'err'); });
+  });
+
+  // Auto-refresh every 60 s
+  setInterval(function () { if (sessionStorage.getItem('dtflow_admin_ok') === '1') load(); }, 60000);
+
+})();
+</script>
+</body>
+</html>
