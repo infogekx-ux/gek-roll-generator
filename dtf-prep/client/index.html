@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>G|PRINT DTF Prep</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="hdr">
+  <div class="logo"><span class="g">G</span><span class="sep">|</span><span class="p">PRINT</span></div>
+  <div class="subtitle">DTF Prep v1.0</div>
+</header>
+
+<!-- 1. LOAD -->
+<section class="sec">
+  <h3 class="sec-title">Load</h3>
+  <button class="btn primary" id="btnLoad">Load Image</button>
+  <div class="meta" id="loadMeta">No file loaded</div>
+</section>
+
+<!-- 2. TRACE -->
+<section class="sec">
+  <h3 class="sec-title">Trace</h3>
+  <label class="lbl">Preset</label>
+  <select id="presetSel" class="input">
+    <option value="bw" selected>Black &amp; White Logo</option>
+    <option value="detailed">Detailed</option>
+    <option value="silhouette">Silhouette</option>
+  </select>
+
+  <div id="thresholdGroup">
+    <label class="lbl">Threshold: <span id="thresholdVal">128</span></label>
+    <input type="range" id="thresholdSlider" min="0" max="255" value="128" class="slider">
+  </div>
+
+  <div class="btn-row">
+    <button class="btn" id="btnTrace">Trace</button>
+    <button class="btn" id="btnExpand">Expand + Ungroup</button>
+  </div>
+</section>
+
+<!-- 3. COLORS -->
+<section class="sec">
+  <h3 class="sec-title">Colors</h3>
+  <button class="btn" id="btnGetColor">Select Color from Art</button>
+  <div class="swatch-row">
+    <div class="swatch" id="swatch"></div>
+    <div class="swatch-rgb" id="swatchRGB">—</div>
+  </div>
+
+  <label class="lbl">Tolerance: <span id="tolVal">10</span></label>
+  <input type="range" id="tolSlider" min="0" max="50" value="10" class="slider">
+
+  <button class="btn danger" id="btnRemoveColor">Remove This Color</button>
+
+  <hr class="divider">
+
+  <button class="btn" id="btnSwap">Swap Black/White</button>
+  <button class="btn" id="btnInvert">Invert All Colors</button>
+</section>
+
+<!-- 4. PREVIEW -->
+<section class="sec">
+  <h3 class="sec-title">Preview</h3>
+  <div class="btn-row">
+    <button class="btn dark" id="btnPrevBlack">Preview Black</button>
+    <button class="btn light" id="btnPrevWhite">Preview White</button>
+  </div>
+  <button class="btn" id="btnPrevRemove">Remove Preview</button>
+</section>
+
+<!-- 5. EXPORT -->
+<section class="sec">
+  <h3 class="sec-title">Export</h3>
+  <label class="lbl">Width (cm)</label>
+  <input type="number" id="widthInput" value="25" step="0.5" min="1" class="input">
+
+  <label class="lbl">DPI</label>
+  <select id="dpiSel" class="input">
+    <option value="150">150</option>
+    <option value="300" selected>300</option>
+    <option value="600">600</option>
+  </select>
+
+  <label class="check">
+    <input type="checkbox" id="mirrorChk"> Mirror (DTF)
+  </label>
+
+  <button class="btn primary" id="btnExport">Export DTF PNG</button>
+</section>
+
+<!-- STATUS -->
+<div id="status" class="status"></div>
+
+<footer class="ftr">
+  G|PRINT DTF Prep v1.0 — powered by GEK-X
+</footer>
+
+<script src="../lib/CSInterface.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
