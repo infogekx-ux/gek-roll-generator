@@ -1,0 +1,157 @@
+/* ============================================================
+   MISJA 5 — DRS image tools UI (DELTA — APPEND do app.css, nie replace!)
+   Remove BG + Vectorize buttons on each design row + before/after compare.
+   DNA: Montserrat, pillar colors, ZERO glow/gradient/emoji, białe karty.
+   ============================================================ */
+
+/* Pasek narzędzi pod meta designu */
+.design-tools {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.design-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  background: #fff;
+  color: var(--text-2);
+  transition: transform .15s ease-out, border-color .15s ease-out, color .15s ease-out, background .15s ease-out;
+}
+.design-action-btn i { font-size: 15px; }
+.design-action-btn:hover {
+  border-color: #000;
+  color: #000;
+  transform: translateY(-1px);
+}
+.design-action-btn:active { transform: translateY(0); }
+.design-action-btn.processing { opacity: 0.55; pointer-events: none; }
+/* Sugestia wektoryzacji gdy DPI za niskie — szary akcent G|OPTIMA, nie czerwony */
+.design-action-btn.dpi-suggest {
+  border-color: var(--text-3);
+  color: var(--text);
+}
+
+/* Spinner overlay na miniaturce podczas przetwarzania */
+.file-thumb { position: relative; }
+.thumb-spinner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.78);
+  border-radius: inherit;
+}
+.thumb-spinner::after {
+  content: '';
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid var(--border-2);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: drs-tools-spin 0.7s linear infinite;
+}
+@keyframes drs-tools-spin { to { transform: rotate(360deg); } }
+
+/* Panel porównania before/after */
+.design-preview-compare {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  padding: 10px;
+  background: var(--bg-alt);
+  border-radius: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.design-compare-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+.design-preview-label {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-3);
+}
+.design-preview-compare img {
+  max-height: 88px;
+  max-width: 120px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #fff;
+  object-fit: contain;
+}
+/* "After" na szachownicy żeby było widać przezroczystość */
+.design-compare-after img {
+  background-image:
+    linear-gradient(45deg, #e6e6e6 25%, transparent 25%),
+    linear-gradient(-45deg, #e6e6e6 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e6e6e6 75%),
+    linear-gradient(-45deg, transparent 75%, #e6e6e6 75%);
+  background-size: 12px 12px;
+  background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+}
+.design-compare-meta {
+  flex: 1 1 160px;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+.design-compare-info {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+.design-compare-warn {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--border-2);
+  border-left: 3px solid var(--orange, #E6B800);
+  border-radius: 6px;
+  padding: 6px 10px;
+  line-height: 1.4;
+}
+.design-compare-actions { display: flex; gap: 8px; margin-top: 2px; }
+.design-compare-actions .btn-apply {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #00D26A;            /* G|SITE green = positive/apply (DNA) */
+  color: #000;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.design-compare-actions .btn-cancel {
+  padding: 8px 16px;
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-2);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.design-compare-actions .btn-apply:hover { transform: translateY(-1px); }
+.design-compare-actions .btn-cancel:hover { border-color: #000; color: #000; }
