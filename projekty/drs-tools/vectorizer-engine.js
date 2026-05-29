@@ -48,19 +48,21 @@ async function vectorize(imageBuffer, options = {}) {
   const inputDPI = Number.isFinite(options.inputDPI) && options.inputDPI > 0 ? options.inputDPI : 72;
 
   const meta = await sharp(imageBuffer).metadata();
-  const srcWidth = meta.width || 0, srcHeight = meta.height || 0;
+  let srcWidth = meta.width || 0, srcHeight = meta.height || 0;
   if (!srcWidth || !srcHeight) throw new Error('vectorize: cannot read image dimensions');
+  // EXIF orientation 5–8 swaps W/H once auto-oriented — match the rotated content.
+  if (meta.orientation && meta.orientation >= 5) { const t = srcWidth; srcWidth = srcHeight; srcHeight = t; }
 
-  // downscale tylko gdy za duży — zachowaj proporcje
-  let pipe = sharp(imageBuffer).ensureAlpha();
+  // .rotate() auto-applies EXIF orientation; downscale only if too big (proporcje)
+  let pipe = sharp(imageBuffer).rotate();
   const longSide = Math.max(srcWidth, srcHeight);
   if (longSide > TRACE_MAX) {
     const s = TRACE_MAX / longSide;
     pipe = pipe.resize(Math.max(1, Math.round(srcWidth * s)), Math.max(1, Math.round(srcHeight * s)));
   }
   if (colorMode === 'bw') pipe = pipe.grayscale();
-
-  const { data, info } = await pipe.raw().toBuffer({ resolveWithObject: true });
+  // force 8-bit sRGB RGBA so imagetracerjs reads pixels correctly (CMYK/16-bit/palette safe)
+  const { data, info } = await pipe.toColourspace('srgb').ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const tw = info.width, th = info.height, tch = info.channels;
 
   // imagetracerjs wymaga RGBA ImageData; sharp da nam 4 kanały (ensureAlpha).

@@ -121,7 +121,11 @@ async function removeBg(imageBuffer, options = {}) {
   const mode = options.mode || 'auto';
 
   const meta = await sharp(imageBuffer).metadata();
+  // .rotate() (no args) auto-applies EXIF orientation — phone photos / screenshots
+  // often carry orientation 6/8; without this the result comes out sideways.
   const { data, info } = await sharp(imageBuffer)
+    .rotate()
+    .toColourspace('srgb')   // CMYK / 16-bit / palette → 8-bit sRGB (real-world inputs)
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
@@ -171,7 +175,7 @@ async function removeBg(imageBuffer, options = {}) {
 // Detekcja tła bez usuwania — dla orkiestratora (auto: solid→threshold, complex→AI).
 async function detectBackground(imageBuffer, tolerance = 30) {
   if (!imageBuffer || imageBuffer.length === 0) throw new Error('detectBackground: empty input');
-  const { data, info } = await sharp(imageBuffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { data, info } = await sharp(imageBuffer).rotate().toColourspace('srgb').ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const a = analyzeBorder(data, info.width, info.height, info.channels, tolerance);
   return {
     solid: a.solid,

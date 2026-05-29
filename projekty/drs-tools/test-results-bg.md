@@ -1,12 +1,12 @@
 # Test Results — Background Removal (MISJA 5)
-> Wygenerowane: 2026-05-29T10:56:17.542Z
+> Wygenerowane: 2026-05-29T11:24:53.614Z
 > Silnik: remove-bg-engine.js (sharp, threshold + flood, autodetect)
 
 ## Podsumowanie
 - **Asercje:** 1053/1053 pass, 0 fail
 - **Liczba testów (asercji):** 1053 ✅ (≥100)
 - **Autodetect (solid vs complex):** 48/48 = **100.0%** ✅ (≥90%)
-- **Czas:** śr. 6.0ms, max 251.4ms
+- **Czas:** śr. 5.7ms, max 249.2ms
 - **Status:** ✅ ZIELONO — zero crashy, zero NaN
 
 ## Pokryte scenariusze

@@ -18,8 +18,8 @@ async function aiRemoveBg(imageBuffer, opts = {}) {
   const inP = path.join(os.tmpdir(), `bgai-in-${id}.png`);
   const outP = path.join(os.tmpdir(), `bgai-out-${id}.png`);
 
-  // Normalize → PNG (parent uses sharp; child uses onnx — separate processes).
-  const png = await sharp(imageBuffer).png().toBuffer();
+  // Normalize → PNG + EXIF auto-orient (parent uses sharp; child uses onnx — separate procs).
+  const png = await sharp(imageBuffer).rotate().png().toBuffer();
   fs.writeFileSync(inP, png);
 
   const cleanup = () => { try { fs.unlinkSync(inP); } catch (e) {} try { fs.unlinkSync(outP); } catch (e) {} };

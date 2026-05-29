@@ -1,11 +1,11 @@
 # Test Results — Vectorizer (MISJA 5)
-> Wygenerowane: 2026-05-29T10:57:51.792Z
+> Wygenerowane: 2026-05-29T11:24:57.296Z
 > Silnik: vectorizer-engine.js (imagetracerjs trace + sharp SVG→PNG render)
 
 ## Podsumowanie
 - **Asercje:** 575/575 pass, 0 fail
 - **Liczba testów (asercji):** 575 ✅ (≥100)
-- **Czas:** śr. 70.6ms, max 1860.7ms ✅ (<10s)
+- **Czas:** śr. 49.3ms, max 1062.2ms ✅ (<10s)
 - **Status:** ✅ ZIELONO — zero crashy, zero NaN, render OK
 
 ## Pokryte scenariusze
