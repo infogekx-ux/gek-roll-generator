@@ -22,22 +22,32 @@ const sharp = require('sharp');
 const ImageTracer = require('imagetracerjs');
 
 const TRACE_MAX = 1000;   // max bok obrazu wchodzącego do trace'a (szybkość)
+const TRACE_MIN = 512;    // upscale mniejsze wejścia → gładsze krzywe wektora
 const OUT_MAX = 8000;     // cap wymiaru renderu (bezpieczeństwo pamięci)
 
 function detailOptions(detail, colorMode) {
   const bw = colorMode === 'bw';
-  // imagetracerjs: ltres/qtres = dokładność krzywych, pathomit = pomijaj drobne
-  // ścieżki (szum), numberofcolors = paleta, colorquantcycles = jakość kwantyzacji.
-  const base = bw
-    ? { colorsampling: 0, numberofcolors: 2, mincolorratio: 0 }
-    : { colorsampling: 2, mincolorratio: 0, colorquantcycles: 3 };
-  const byDetail = {
-    low:    { ltres: 1.5, qtres: 1.5, pathomit: 12, numberofcolors: bw ? 2 : 6,  roundcoords: 1 },
-    medium: { ltres: 1.0, qtres: 1.0, pathomit: 8,  numberofcolors: bw ? 2 : 12, roundcoords: 1 },
-    high:   { ltres: 0.5, qtres: 0.5, pathomit: 4,  numberofcolors: bw ? 2 : 24, roundcoords: 2 },
+  // Logos/screenshots have FEW real colors. The old presets used up to 24 colors
+  // with no denoising → every JPEG artifact + anti-aliasing band became its own
+  // path (hundreds of paths, ragged edges). Fix: keep palette small, denoise
+  // (blurradius), drop tiny specks (pathomit + mincolorratio), smooth (linefilter).
+  const base = {
+    scale: 1,
+    strokewidth: 0,
+    linefilter: true,          // smooth out staircase noise on edges
+    roundcoords: 1,
+    colorsampling: bw ? 0 : 2,
+    colorquantcycles: 4,       // better palette → fewer stray colors
+    mincolorratio: 0.005,      // keep REAL colors (logo text) — only drop true speckle
   };
-  return Object.assign({ scale: 1, strokewidth: 0, linefilter: false },
-    base, byDetail[detail] || byDetail.medium);
+  // More colors + lighter blur as detail rises. Too much blur / too few colors
+  // recolors small features (e.g. navy logo text → bled into orange) — avoided here.
+  const byDetail = {
+    low:    { numberofcolors: bw ? 2 : 6,  ltres: 1.0, qtres: 1.0, pathomit: 12, blurradius: 3, blurdelta: 28 },
+    medium: { numberofcolors: bw ? 2 : 10, ltres: 0.7, qtres: 0.7, pathomit: 6,  blurradius: 1, blurdelta: 22 },
+    high:   { numberofcolors: bw ? 3 : 16, ltres: 0.4, qtres: 0.4, pathomit: 3,  blurradius: 0, blurdelta: 18 },
+  };
+  return Object.assign(base, byDetail[detail] || byDetail.medium);
 }
 
 async function vectorize(imageBuffer, options = {}) {
@@ -53,13 +63,19 @@ async function vectorize(imageBuffer, options = {}) {
   // EXIF orientation 5–8 swaps W/H once auto-oriented — match the rotated content.
   if (meta.orientation && meta.orientation >= 5) { const t = srcWidth; srcWidth = srcHeight; srcHeight = t; }
 
-  // .rotate() auto-applies EXIF orientation; downscale only if too big (proporcje)
+  // .rotate() auto-applies EXIF orientation. Trace target: downscale huge inputs,
+  // UPSCALE tiny ones (small logos trace into coarse, jagged curves) toward TRACE_MIN.
   let pipe = sharp(imageBuffer).rotate();
   const longSide = Math.max(srcWidth, srcHeight);
   if (longSide > TRACE_MAX) {
     const s = TRACE_MAX / longSide;
     pipe = pipe.resize(Math.max(1, Math.round(srcWidth * s)), Math.max(1, Math.round(srcHeight * s)));
+  } else if (longSide > 0 && longSide < TRACE_MIN) {
+    const s = TRACE_MIN / longSide;
+    pipe = pipe.resize(Math.max(1, Math.round(srcWidth * s)), Math.max(1, Math.round(srcHeight * s)), { kernel: 'cubic' });
   }
+  // median denoise kills JPEG speckle so the tracer sees flat color regions
+  pipe = pipe.median(3);
   if (colorMode === 'bw') pipe = pipe.grayscale();
   // force 8-bit sRGB RGBA so imagetracerjs reads pixels correctly (CMYK/16-bit/palette safe)
   const { data, info } = await pipe.toColourspace('srgb').ensureAlpha().raw().toBuffer({ resolveWithObject: true });
