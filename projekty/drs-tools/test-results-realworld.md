@@ -1,10 +1,10 @@
 # Test Results — REAL-WORLD (MISJA 5)
-> Wygenerowane: 2026-05-29T11:32:25.618Z
+> Wygenerowane: 2026-05-29T12:46:22.021Z
 > Scenariusz: "screenshot z neta → drukarz → dramat". Te testy walą w realne, problematyczne wejścia.
 
 ## Podsumowanie
 - **Asercje:** 658/658 pass, 0 fail ✅ (≥300)
-- **Czas:** BG śr 19ms / max 38ms · VEC śr 52ms / max 139ms · AI śr 3558ms / max 3662ms
+- **Czas:** BG śr 18ms / max 37ms · VEC śr 155ms / max 317ms · AI śr 5231ms / max 15636ms
 - **Status:** ✅ ZIELONO — zero crashy, zero NaN
 
 ## Kategorie
