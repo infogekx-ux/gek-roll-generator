@@ -1,0 +1,149 @@
+/* ============================================================
+   MISJA 5 — BENTO feature grid (DRS landing)
+   DNA-compliant: 8px spacing, radius 16, Montserrat, zero glow/gradient/emoji,
+   green ONLY on Optima (przełamanie), numery usunięte (Pączek), hierarchy = scale.
+   Wspólny dla wariantu P (pyramid) i K (mosaic) — różni je DOM order + size class.
+   ============================================================ */
+
+/* Override the live .features-grid flex-column with a grid. We re-use the
+   live .feature-card visuals (demos) but lay them out as bento. */
+.bento-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bento-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  transition: transform .25s ease-out, opacity .45s ease-out;
+  overflow: hidden;
+}
+/* Hover: movement only — lift + tiny scale. ZERO box-shadow/glow (DNA). */
+.bento-card:hover {
+  transform: translateY(-6px) scale(1.02);
+}
+/* Staggered scroll-reveal start state. JS removes .pre-reveal on intersect;
+   transform + opacity only — no shadow, no glow. */
+.bento-card.pre-reveal {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+.bento-demo {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 64px;
+}
+.bento-body { display: flex; flex-direction: column; }
+.bento-card h3 {
+  font-size: 16px; font-weight: 800; letter-spacing: -0.01em;
+  margin: 0 0 4px;
+}
+.bento-card p {
+  font-size: 13px; font-weight: 400; color: var(--text-3);
+  line-height: 1.5; margin: 0;
+}
+.feature-tag {
+  display: inline-block; align-self: flex-start;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.04em;
+  padding: 3px 8px; border-radius: 6px;
+  background: #000; color: #fff; margin-bottom: 8px;
+}
+.feature-tag-new { background: #00D26A; color: #000; }
+
+/* Optima przełamanie — green border, the ONE accent in the section. */
+.bento-optima { border: 2px solid #00D26A; }
+
+/* ---- Mobile (<768): single column stack — DO NOT TOUCH (Pączek). ---- */
+/* The flex-column above already gives the live mobile stack. Cards full-width. */
+
+/* ---- Tablet (768–1023): 2 columns, hierarchy preserved. ---- */
+@media (min-width: 768px) {
+  .bento-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: 200px;
+    grid-auto-flow: dense;
+    gap: 16px;
+  }
+  .bento-hero { grid-column: span 2; grid-row: span 2; }
+  .bento-wide { grid-column: span 2; grid-row: span 1; }
+  .bento-small { grid-column: span 1; grid-row: span 1; }
+  .bento-card { padding: 20px; }
+
+  /* FILL the big cards (shared 768+). Hero + wide go side-by-side: demo claims
+     the left, body vertical-centered on the right → no dead white (Pączek #1). */
+  .bento-hero,
+  .bento-wide {
+    flex-direction: row;
+    align-items: center;
+    gap: 24px;
+  }
+  .bento-hero .bento-demo {
+    flex: 1 1 42%; min-height: 0;
+    align-items: center; justify-content: center;
+  }
+  .bento-hero .bento-body { flex: 1 1 58%; }
+  .bento-hero h3 { font-size: 22px; }
+  .bento-hero p  { font-size: 15px; line-height: 1.55; }
+  .bento-hero .optima-demo { transform: scale(2); transform-origin: center; }
+
+  /* Center the demo+body group so leftover width reads as balanced breathing
+     room, not a void stranded on the right (<20% dead space — Pączek). */
+  .bento-wide { justify-content: center; }
+  .bento-wide .bento-demo {
+    flex: 0 0 auto; width: 120px; min-height: 96px;
+    align-items: center; justify-content: center;
+  }
+  .bento-wide .bento-body { flex: 0 1 auto; max-width: 420px; }
+  .bento-wide h3 { font-size: 18px; }
+  .bento-wide p  { font-size: 14px; line-height: 1.5; }
+}
+
+/* ---- Desktop (≥1024): full bento, 4-col, mixed sizes fill width. ---- */
+@media (min-width: 1024px) {
+  .bento-grid {
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: 180px;
+    grid-auto-flow: dense;
+    gap: 20px;
+  }
+  .bento-hero  { grid-column: span 2; grid-row: span 2; }
+  .bento-wide  { grid-column: span 2; grid-row: span 1; }
+  .bento-small { grid-column: span 1; grid-row: span 1; }
+  .bento-card  { padding: 24px; }
+
+  /* Hero card on desktop is ~square (2×2): go back to a column — big chart fills
+     the top, headline anchored at the bottom (space-between kills the void). */
+  .bento-hero {
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: stretch;
+    gap: 16px;
+  }
+  .bento-hero .bento-demo {
+    flex: 1 1 auto; width: 100%; min-height: 0;
+    align-items: center; justify-content: center;
+  }
+  .bento-hero .bento-body { flex: 0 0 auto; width: 100%; }
+  .bento-hero h3 { font-size: 24px; }
+  .bento-hero p  { font-size: 15px; line-height: 1.55; }
+  .bento-hero .optima-demo { transform: scale(2); transform-origin: center; }
+
+  /* Wide cards on desktop: a touch bigger demo column. */
+  .bento-wide .bento-demo { width: 132px; }
+
+  /* Small cards: compact — demo top, title, short desc. */
+  .bento-small { padding: 18px; gap: 10px; }
+  .bento-small h3 { font-size: 14px; }
+  .bento-small p { font-size: 12px; line-height: 1.45; }
+  .bento-small .bento-demo { min-height: 48px; transform: scale(0.8); transform-origin: left center; }
+}
