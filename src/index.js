@@ -8,6 +8,12 @@ sharp.cache(false);
 const SHARP_OPTS = { limitInputPixels: false };
 const { createClient } = require('@supabase/supabase-js');
 
+// ===== MISJA 5: DRS image tools (Remove BG + Vectorizer) =====
+// Uwaga: main process NIE ładuje onnx (@imgly) — AI biegnie w child process
+// (ai-worker.js), bo onnxruntime-node + sharp w jednym procesie = heap corruption.
+const { processRemoveBg } = require('../projekty/drs-tools/remove-bg-service.js');
+const { vectorize } = require('../projekty/drs-tools/vectorizer-engine.js');
+
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -451,6 +457,73 @@ app.post('/convert-tiff', tiffUpload.single('file'), async (req, res) => {
 
   } catch (err) {
     console.error('[TIFF] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ===== MISJA 5: HELPER — decode base64 / data-URL image =====
+function decodeImageField(body) {
+  let b64 = (body && (body.imageBase64 || body.image)) || '';
+  if (typeof b64 !== 'string' || !b64) return null;
+  const comma = b64.indexOf(',');
+  if (b64.slice(0, 5) === 'data:' && comma !== -1) b64 = b64.slice(comma + 1);
+  try {
+    const buf = Buffer.from(b64, 'base64');
+    return buf.length ? buf : null;
+  } catch (e) { return null; }
+}
+
+// ===== MISJA 5: Background Removal =====
+// POST { imageBase64, mode:'auto'|'simple'|'flood'|'ai', tolerance:0-255 }
+//   → { resultBase64, method, bgColor, confidence, changed, width, height, elapsed }
+app.post('/remove-bg', async (req, res) => {
+  try {
+    const buf = decodeImageField(req.body);
+    if (!buf) return res.status(400).json({ error: 'Missing or invalid imageBase64' });
+    const mode = ['auto', 'simple', 'flood', 'ai'].includes(req.body.mode) ? req.body.mode : 'auto';
+    const tolerance = Number.isFinite(req.body.tolerance) ? req.body.tolerance : 30;
+    const t = Date.now();
+    const r = await processRemoveBg(buf, { mode, tolerance });
+    const elapsed = ((Date.now() - t) / 1000).toFixed(2);
+    console.log(`[BG] mode=${mode} method=${r.method} ${r.width}x${r.height} ${elapsed}s changed=${r.changed}`);
+    res.json({
+      resultBase64: 'data:image/png;base64,' + r.resultBuffer.toString('base64'),
+      method: r.method, bgColor: r.bgColor, confidence: r.confidence,
+      changed: r.changed, width: r.width, height: r.height,
+      elapsed: Number(elapsed), note: r.note || null,
+    });
+  } catch (err) {
+    console.error('[BG] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ===== MISJA 5: Vectorizer =====
+// POST { imageBase64, colorMode:'color'|'bw', detail:'low'|'medium'|'high',
+//        targetDPI, inputDPI }
+//   → { svg, pngBase64, pathCount, outputDPI, srcWidth/Height, outWidth/Height, elapsed }
+app.post('/vectorize', async (req, res) => {
+  try {
+    const buf = decodeImageField(req.body);
+    if (!buf) return res.status(400).json({ error: 'Missing or invalid imageBase64' });
+    const colorMode = req.body.colorMode === 'bw' ? 'bw' : 'color';
+    const detail = ['low', 'medium', 'high'].includes(req.body.detail) ? req.body.detail : 'medium';
+    const targetDPI = Number.isFinite(req.body.targetDPI) ? req.body.targetDPI : 300;
+    const inputDPI = Number.isFinite(req.body.inputDPI) ? req.body.inputDPI : 72;
+    const t = Date.now();
+    const r = await vectorize(buf, { colorMode, detail, targetDPI, inputDPI });
+    const elapsed = ((Date.now() - t) / 1000).toFixed(2);
+    console.log(`[VEC] ${colorMode}/${detail} paths=${r.pathCount} ${r.outWidth}x${r.outHeight}@${r.outputDPI} ${elapsed}s`);
+    res.json({
+      svg: r.svg,
+      pngBase64: 'data:image/png;base64,' + Buffer.from(r.pngBuffer).toString('base64'),
+      pathCount: r.pathCount, outputDPI: r.outputDPI,
+      srcWidth: r.srcWidth, srcHeight: r.srcHeight,
+      outWidth: r.outWidth, outHeight: r.outHeight,
+      colorMode, detail, elapsed: Number(elapsed),
+    });
+  } catch (err) {
+    console.error('[VEC] Error:', err);
     res.status(500).json({ error: err.message });
   }
 });

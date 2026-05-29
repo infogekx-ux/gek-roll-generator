@@ -11,6 +11,8 @@ COPY package.json ./
 RUN npm install --production
 
 COPY src/ ./src/
+# MISJA 5: silniki Remove BG + Vectorizer (wymagane przez src/index.js)
+COPY projekty/ ./projekty/
 
 EXPOSE 3000
 
