@@ -1,2 +1,10 @@
 node_modules/
 .env
+
+# Kodzior brain/notes — contain GEK-X credentials, live only on gek-x-hub
+KODZIOR.md
+KODZIOR-RODZINA.md
+KODZIOR-NOTES.md
+
+# polish-K session artifacts (live on hub)
+sesje/

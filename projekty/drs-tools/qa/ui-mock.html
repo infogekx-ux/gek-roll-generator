@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MISJA 5 — DRS tools UI QA</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.6.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="app-tools-delta.css">
+<style>
+  body{background:var(--bg-alt);font-family:'Montserrat',sans-serif;margin:0;padding:24px;}
+  .wrap{max-width:880px;margin:0 auto;}
+  h2{font-size:20px;font-weight:800;letter-spacing:-0.02em;margin:0 0 4px;}
+  .sub{color:var(--text-3);font-size:13px;margin:0 0 20px;}
+  .qa-tag{position:fixed;top:8px;right:8px;background:#000;color:#fff;font-weight:800;font-size:11px;padding:6px 10px;border-radius:6px;letter-spacing:.06em;text-transform:uppercase;z-index:99;}
+</style>
+</head><body>
+<div class="qa-tag">MISJA 5 — tools UI</div>
+<div class="wrap">
+  <h2>Your designs</h2>
+  <p class="sub">Remove BG + Vectorize on every design — server-side, before/after, apply or keep original.</p>
+  <div id="fileList" class="file-list">
+
+    <!-- Row 1: 300 DPI design, Remove BG compare panel OPEN -->
+    <div class="file-row">
+      <div class="file-thumb"><img src="t-orig.png" alt=""></div>
+      <div class="file-info">
+        <div class="file-name"><span class="file-num">1</span>client-logo.png</div>
+        <div class="file-meta">300×220px · 10.2×7.5cm @ <span style="color:var(--green);font-weight:700">300 DPI</span></div>
+        <div class="design-tools">
+          <button class="design-action-btn" data-act="bg" type="button"><i class="ti ti-eraser"></i> Remove BG</button>
+          <button class="design-action-btn" data-act="vec" type="button"><i class="ti ti-vector"></i> Vectorize</button>
+        </div>
+        <div class="design-preview-compare">
+          <div class="design-compare-pane design-compare-before">
+            <div class="design-preview-label">Before</div><img src="t-orig.png" alt="">
+          </div>
+          <div class="design-compare-pane design-compare-after">
+            <div class="design-preview-label">After</div><img src="t-bg.png" alt="">
+          </div>
+          <div class="design-compare-meta">
+            <div class="design-compare-info">Background removed · <strong>THRESHOLD</strong> · #ffffff</div>
+            <div class="design-compare-actions">
+              <button class="btn-apply">Apply</button>
+              <button class="btn-cancel">Keep original</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="file-controls">
+        <div><label>W (cm)</label><input type="number" step="0.1" value="10.2"></div>
+        <div class="dim-x">×</div>
+        <div><label>H (cm)</label><input type="number" step="0.1" value="7.5"></div>
+        <div><label>Qty</label><input type="number" min="1" value="3"></div>
+      </div>
+      <button class="file-remove" aria-label="Remove">×</button>
+    </div>
+
+    <!-- Row 2: low-DPI design → Vectorize suggested + spinner running -->
+    <div class="file-row">
+      <div class="file-thumb"><img src="t-low.png" alt=""><div class="thumb-spinner"></div></div>
+      <div class="file-info">
+        <div class="file-name"><span class="file-num">2</span>scan-old.jpg</div>
+        <div class="file-meta">90×66px · 7.6×5.6cm @ <span style="color:var(--red);font-weight:700">30 DPI</span></div>
+        <div class="dpi-warn dpi-bad">❌ 30 DPI — too low for print</div>
+        <div class="design-tools">
+          <button class="design-action-btn" data-act="bg" type="button"><i class="ti ti-eraser"></i> Remove BG</button>
+          <button class="design-action-btn dpi-suggest" data-act="vec" type="button"><i class="ti ti-vector"></i> Vectorize</button>
+        </div>
+      </div>
+      <div class="file-controls">
+        <div><label>W (cm)</label><input type="number" step="0.1" value="7.6"></div>
+        <div class="dim-x">×</div>
+        <div><label>H (cm)</label><input type="number" step="0.1" value="5.6"></div>
+        <div><label>Qty</label><input type="number" min="1" value="1"></div>
+      </div>
+      <button class="file-remove" aria-label="Remove">×</button>
+    </div>
+
+    <!-- Row 3: Vectorize compare panel OPEN with warning -->
+    <div class="file-row">
+      <div class="file-thumb"><img src="t-low.png" alt=""></div>
+      <div class="file-info">
+        <div class="file-name"><span class="file-num">3</span>artwork.jpg</div>
+        <div class="file-meta">90×66px · 7.6×5.6cm @ <span style="color:var(--red);font-weight:700">30 DPI</span></div>
+        <div class="design-tools">
+          <button class="design-action-btn" data-act="bg" type="button"><i class="ti ti-eraser"></i> Remove BG</button>
+          <button class="design-action-btn dpi-suggest" data-act="vec" type="button"><i class="ti ti-vector"></i> Vectorize</button>
+        </div>
+        <div class="design-preview-compare">
+          <div class="design-compare-pane design-compare-before">
+            <div class="design-preview-label">Before</div><img src="t-low.png" alt="">
+          </div>
+          <div class="design-compare-pane design-compare-after">
+            <div class="design-preview-label">After</div><img src="t-vec.png" alt="">
+          </div>
+          <div class="design-compare-meta">
+            <div class="design-compare-info">Original: 30 DPI → Vectorized: 300 DPI · 94 paths</div>
+            <div class="design-compare-warn">Vectorized result may differ from original. Review before printing.</div>
+            <div class="design-compare-actions">
+              <button class="btn-apply">Apply vectorized</button>
+              <button class="btn-cancel">Keep original</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="file-controls">
+        <div><label>W (cm)</label><input type="number" step="0.1" value="7.6"></div>
+        <div class="dim-x">×</div>
+        <div><label>H (cm)</label><input type="number" step="0.1" value="5.6"></div>
+        <div><label>Qty</label><input type="number" min="1" value="2"></div>
+      </div>
+      <button class="file-remove" aria-label="Remove">×</button>
+    </div>
+
+  </div>
+</div>
+</body></html>
