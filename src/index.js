@@ -2,6 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const sharp = require('sharp');
 const multer = require('multer');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 const tiffUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 200 * 1024 * 1024 } });
 
 sharp.cache(false);
@@ -21,7 +24,13 @@ const PX_PER_CM = 118.11; // 300 DPI
 const LABEL_HEIGHT_CM = 3;
 const GAP_AFTER_LABEL_CM = 1;
 const BOTTOM_GAP_CM = 0.5;
-const MAX_ROLL_LENGTH_CM = 1000; // 10 meter max per roll
+const MAX_ROLL_LENGTH_CM = 1000; // 10 meter — logical/legacy display value
+
+// OOM FIX (v3.2.0): cap the height of every RENDERED png so a single RGBA buffer
+// never exceeds ~1GB. 5m @ 35cm/300DPI ≈ 4134 × 59055 × 4 = ~931MB base buffer.
+// Long orders are split into multiple `_segN` PNGs; small orders (<segment) stay one PNG.
+// Tunable via env without code change.
+const SEGMENT_MAX_CM = Number(process.env.SEGMENT_MAX_CM) || 500;
 
 // ===== LOGO CACHE =====
 const logoCache = new Map();
@@ -49,11 +58,12 @@ async function getCachedLogo(url) {
 
 // ===== HEALTH CHECK =====
 app.get('/', (req, res) => {
-  res.json({ 
-    service: 'GEK Roll Generator', 
-    version: '3.1.0',
+  res.json({
+    service: 'GEK Roll Generator',
+    version: '3.2.0',
     status: 'ok',
     maxRollLength: MAX_ROLL_LENGTH_CM + 'cm',
+    segmentMax: SEGMENT_MAX_CM + 'cm',
     timestamp: new Date().toISOString()
   });
 });
@@ -83,75 +93,6 @@ function buildLabelSvg(canvasW, labelHeightPx, textStartX, lines) {
 </svg>`);
 }
 
-// ===== HELPER: Build ZIP buffer from array of {name, buffer} =====
-function buildZipBuffer(entries) {
-  const localParts = [];
-  const centralParts = [];
-  let offset = 0;
-
-  for (const entry of entries) {
-    const nameBytes = Buffer.from(entry.name, 'utf8');
-    const data = entry.buffer;
-    const crc = crc32(data);
-
-    // Local file header (30 + nameLen + dataLen)
-    const local = Buffer.alloc(30 + nameBytes.length);
-    local.writeUInt32LE(0x04034b50, 0); // signature
-    local.writeUInt16LE(20, 4);          // version needed
-    local.writeUInt16LE(0, 6);           // flags
-    local.writeUInt16LE(0, 8);           // compression (store)
-    local.writeUInt16LE(0, 10);          // mod time
-    local.writeUInt16LE(0, 12);          // mod date
-    local.writeUInt32LE(crc, 14);        // crc32
-    local.writeUInt32LE(data.length, 18); // compressed size
-    local.writeUInt32LE(data.length, 22); // uncompressed size
-    local.writeUInt16LE(nameBytes.length, 26); // name length
-    local.writeUInt16LE(0, 28);          // extra length
-    nameBytes.copy(local, 30);
-
-    // Central directory entry (46 + nameLen)
-    const central = Buffer.alloc(46 + nameBytes.length);
-    central.writeUInt32LE(0x02014b50, 0); // signature
-    central.writeUInt16LE(20, 4);          // version made by
-    central.writeUInt16LE(20, 6);          // version needed
-    central.writeUInt16LE(0, 8);           // flags
-    central.writeUInt16LE(0, 10);          // compression
-    central.writeUInt16LE(0, 12);          // mod time
-    central.writeUInt16LE(0, 14);          // mod date
-    central.writeUInt32LE(crc, 16);        // crc32
-    central.writeUInt32LE(data.length, 20); // compressed size
-    central.writeUInt32LE(data.length, 24); // uncompressed size
-    central.writeUInt16LE(nameBytes.length, 28); // name length
-    central.writeUInt16LE(0, 30);          // extra length
-    central.writeUInt16LE(0, 32);          // comment length
-    central.writeUInt16LE(0, 34);          // disk start
-    central.writeUInt16LE(0, 36);          // internal attrs
-    central.writeUInt32LE(0, 38);          // external attrs
-    central.writeUInt32LE(offset, 42);     // local header offset
-    nameBytes.copy(central, 46);
-
-    localParts.push(local, data);
-    centralParts.push(central);
-    offset += local.length + data.length;
-  }
-
-  const centralOffset = offset;
-  const centralSize = centralParts.reduce((s, c) => s + c.length, 0);
-
-  // End of central directory (22 bytes)
-  const end = Buffer.alloc(22);
-  end.writeUInt32LE(0x06054b50, 0);
-  end.writeUInt16LE(0, 4);
-  end.writeUInt16LE(0, 6);
-  end.writeUInt16LE(entries.length, 8);
-  end.writeUInt16LE(entries.length, 10);
-  end.writeUInt32LE(centralSize, 12);
-  end.writeUInt32LE(centralOffset, 16);
-  end.writeUInt16LE(0, 20);
-
-  return Buffer.concat([...localParts, ...centralParts, end]);
-}
-
 function crc32(buf) {
   const table = new Uint32Array(256);
   for (let n = 0; n < 256; n++) {
@@ -164,17 +105,90 @@ function crc32(buf) {
   return (crc ^ 0xFFFFFFFF) >>> 0;
 }
 
-// ===== HELPER: Split placed items into rolls =====
+// ===== HELPER: Build a ZIP (store, no compression) STREAMING from temp files on disk =====
+// Reads one entry into memory at a time → peak RAM stays ~one segment, not the whole bundle.
+// entries: [{ name, path }]  → writes a valid .zip to outPath.
+function buildZipFromFiles(entries, outPath) {
+  const fd = fs.openSync(outPath, 'w');
+  try {
+    const central = [];
+    let offset = 0;
+    for (const entry of entries) {
+      const nameBytes = Buffer.from(entry.name, 'utf8');
+      const data = fs.readFileSync(entry.path); // one segment at a time
+      const crc = crc32(data);
+
+      const local = Buffer.alloc(30 + nameBytes.length);
+      local.writeUInt32LE(0x04034b50, 0);
+      local.writeUInt16LE(20, 4);
+      local.writeUInt16LE(0, 6);
+      local.writeUInt16LE(0, 8);   // store
+      local.writeUInt16LE(0, 10);
+      local.writeUInt16LE(0, 12);
+      local.writeUInt32LE(crc, 14);
+      local.writeUInt32LE(data.length, 18);
+      local.writeUInt32LE(data.length, 22);
+      local.writeUInt16LE(nameBytes.length, 26);
+      local.writeUInt16LE(0, 28);
+      nameBytes.copy(local, 30);
+
+      fs.writeSync(fd, local);
+      fs.writeSync(fd, data);
+
+      const cen = Buffer.alloc(46 + nameBytes.length);
+      cen.writeUInt32LE(0x02014b50, 0);
+      cen.writeUInt16LE(20, 4);
+      cen.writeUInt16LE(20, 6);
+      cen.writeUInt16LE(0, 8);
+      cen.writeUInt16LE(0, 10);
+      cen.writeUInt16LE(0, 12);
+      cen.writeUInt16LE(0, 14);
+      cen.writeUInt32LE(crc, 16);
+      cen.writeUInt32LE(data.length, 20);
+      cen.writeUInt32LE(data.length, 24);
+      cen.writeUInt16LE(nameBytes.length, 28);
+      cen.writeUInt16LE(0, 30);
+      cen.writeUInt16LE(0, 32);
+      cen.writeUInt16LE(0, 34);
+      cen.writeUInt16LE(0, 36);
+      cen.writeUInt32LE(0, 38);
+      cen.writeUInt32LE(offset, 42);
+      nameBytes.copy(cen, 46);
+      central.push(cen);
+
+      offset += local.length + data.length;
+    }
+
+    const centralOffset = offset;
+    const centralBuf = Buffer.concat(central); // tiny (46B + name per entry)
+    fs.writeSync(fd, centralBuf);
+
+    const end = Buffer.alloc(22);
+    end.writeUInt32LE(0x06054b50, 0);
+    end.writeUInt16LE(0, 4);
+    end.writeUInt16LE(0, 6);
+    end.writeUInt16LE(entries.length, 8);
+    end.writeUInt16LE(entries.length, 10);
+    end.writeUInt32LE(centralBuf.length, 12);
+    end.writeUInt32LE(centralOffset, 16);
+    end.writeUInt16LE(0, 20);
+    fs.writeSync(fd, end);
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+// ===== HELPER: Split placed items into rolls/segments =====
 function splitIntoRolls(placed, maxContentLengthCm) {
   const sorted = [...placed].sort((a, b) => a.y - b.y);
   const rolls = [];
   let currentRoll = [];
   let rollStartY = sorted.length > 0 ? sorted[0].y : 0;
-  
+
   for (const item of sorted) {
     const itemBottom = item.y + item.h;
     const rollContentLength = itemBottom - rollStartY;
-    
+
     if (currentRoll.length > 0 && rollContentLength > maxContentLengthCm) {
       rolls.push(currentRoll);
       currentRoll = [item];
@@ -195,11 +209,11 @@ async function preResizeItems(allItems, fileBuffers, files, margin) {
   for (const item of allItems) {
     const sourceFile = files.find(f => f.fileNum === item.fileNum);
     if (!sourceFile || !fileBuffers[sourceFile.name]) continue;
-    
+
     const targetW = Math.round((item.w - margin) * PX_PER_CM);
     const targetH = Math.round((item.h - margin) * PX_PER_CM);
     const key = `${sourceFile.name}_${targetW}x${targetH}_${item.rotated ? 'r' : 'n'}`;
-    
+
     if (!cache.has(key)) {
       cache.set(key, null); // placeholder to deduplicate
       needed.push({ key, sourceName: sourceFile.name, targetW, targetH, rotated: item.rotated });
@@ -227,7 +241,7 @@ async function preResizeItems(allItems, fileBuffers, files, margin) {
   return cache;
 }
 
-// ===== HELPER: Generate one roll image =====
+// ===== HELPER: Generate one roll/segment image =====
 async function generateRollImage({
   rollItems, canvasW, printableWidthPx, marginPx, margin,
   labelHeightPx, gapPx, totalOffsetPx, rollYOffset,
@@ -236,7 +250,7 @@ async function generateRollImage({
   resizeCache
 }) {
   const composites = [];
-  
+
   let maxBottomY = 0;
   for (const item of rollItems) {
     const localBottom = (item.y - rollYOffset + item.h);
@@ -246,7 +260,7 @@ async function generateRollImage({
   const canvasH = Math.round((contentHeightCm + LABEL_HEIGHT_CM * 2 + GAP_AFTER_LABEL_CM + BOTTOM_GAP_CM) * PX_PER_CM);
 
   // TOP LABEL
-  const topTitle = rollLabel 
+  const topTitle = rollLabel
     ? `▶ START — ${infoLines.line1} — ${rollLabel}`
     : `▶ START — ${infoLines.line1}`;
   composites.push({ input: buildLabelSvg(canvasW, labelHeightPx, textStartX, {
@@ -312,7 +326,8 @@ async function generateRollImage({
 app.post('/generate-roll', async (req, res) => {
   const startTime = Date.now();
   const timer = (label) => console.log(`[ROLL] ⏱ ${label}: ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
-  
+  let tmpDir = null;
+
   try {
     const { config, placed, totalLength, files, customer, orderFolder, orderId } = req.body;
 
@@ -320,7 +335,7 @@ app.post('/generate-roll', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    console.log(`[ROLL] Starting: ${placed.length} items, ${totalLength}cm, ${files.length} files`);
+    console.log(`[ROLL] Starting: ${placed.length} items, ${totalLength}cm, ${files.length} files (segment cap ${SEGMENT_MAX_CM}cm)`);
 
     // ===== DIMENSIONS =====
     const margin = config.cutMargin / 10;
@@ -333,7 +348,7 @@ app.post('/generate-roll', async (req, res) => {
 
     // ===== PARALLEL: Download files + logo =====
     const bucket = config.supabaseBucket || 'printflow';
-    
+
     const [fileBuffers, { buffer: logoBuffer, meta: logoMeta }] = await Promise.all([
       // All file downloads in parallel
       (async () => {
@@ -377,33 +392,36 @@ app.post('/generate-roll', async (req, res) => {
       printerLine: `Gedrukt door ${config.printerName || 'GEK | SAAS'} · GEK | SAAS™`
     };
 
-    // ===== SPLIT INTO ROLLS =====
+    // ===== SPLIT INTO SEGMENTS (OOM fix: cap render height so RGBA buffer stays bounded) =====
     const labelOverhead = LABEL_HEIGHT_CM * 2 + GAP_AFTER_LABEL_CM + BOTTOM_GAP_CM;
-    const rollGroups = splitIntoRolls(placed, MAX_ROLL_LENGTH_CM - labelOverhead);
+    const rollGroups = splitIntoRolls(placed, SEGMENT_MAX_CM - labelOverhead);
     const totalRolls = rollGroups.length;
-    console.log(`[ROLL] ${totalRolls} roll(s)`);
+    console.log(`[ROLL] ${totalRolls} segment(s) @ max ${SEGMENT_MAX_CM}cm`);
 
-    // ===== PRE-RESIZE: All unique file×size combos =====
+    // ===== PRE-RESIZE: All unique file×size combos (dedup → 2300 identical items = 1 buffer) =====
     const resizeCache = await preResizeItems(rollGroups.flat(), fileBuffers, files, margin);
     timer('Pre-resize');
 
-    // ===== GENERATE ROLLS SEQUENTIALLY (OOM fix: one at a time, not Promise.all) =====
+    // ===== GENERATE SEGMENTS SEQUENTIALLY — one big RGBA buffer alive at a time =====
     const _ts = new Date();
     const timestamp = _ts.getFullYear() + '-' + ('0'+(_ts.getMonth()+1)).slice(-2) + '-' + ('0'+_ts.getDate()).slice(-2);
     const companySlug = custCompany ? custCompany.replace(/[^a-zA-Z0-9]/g, '_') + '_' : '';
     const nameSlug = custName.replace(/[^a-zA-Z0-9]/g, '_');
 
     const results = [];
-    const rollPngBuffersForZip = []; // keep references for ZIP bundling
+    const segmentTempFiles = []; // {name, path} → ZIP is built from disk, not RAM
+    let peakRssMb = 0;
+    if (totalRolls > 1) tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gek-roll-'));
 
     for (let rollIdx = 0; rollIdx < rollGroups.length; rollIdx++) {
       const rollItems = rollGroups[rollIdx];
       const rollNum = rollIdx + 1;
-      const rollLabel = totalRolls > 1 ? `Roll ${rollNum}/${totalRolls}` : '';
+      const rollLabel = totalRolls > 1 ? `Deel ${rollNum}/${totalRolls}` : '';
       const rollYOffset = rollItems.length > 0 ? rollItems[0].y : 0;
 
       const memBefore = process.memoryUsage();
-      console.log(`[ROLL]   Roll ${rollNum}/${totalRolls} — generating (RSS: ${(memBefore.rss / 1024 / 1024).toFixed(0)}MB)...`);
+      peakRssMb = Math.max(peakRssMb, memBefore.rss / 1024 / 1024);
+      console.log(`[ROLL]   Segment ${rollNum}/${totalRolls} — generating (RSS: ${(memBefore.rss / 1024 / 1024).toFixed(0)}MB)...`);
 
       const { rollPng, canvasH, contentHeightCm } = await generateRollImage({
         rollItems, canvasW, printableWidthPx, marginPx, margin,
@@ -413,20 +431,23 @@ app.post('/generate-roll', async (req, res) => {
         resizeCache
       });
 
+      const memAfter = process.memoryUsage();
+      peakRssMb = Math.max(peakRssMb, memAfter.rss / 1024 / 1024);
+
       const rollFileName = totalRolls > 1
-        ? `${timestamp}_GS-DRS_${companySlug}${nameSlug}_rolindeling_${rollNum}van${totalRolls}_${config.printableWidth}cm.png`
+        ? `${timestamp}_GS-DRS_${companySlug}${nameSlug}_rolindeling_${config.printableWidth}cm_seg${rollNum}van${totalRolls}.png`
         : `${timestamp}_GS-DRS_${companySlug}${nameSlug}_rolindeling_${config.printableWidth}cm.png`;
 
-      console.log(`[ROLL]   Roll ${rollNum}: ${(rollPng.length / 1024 / 1024).toFixed(1)} MB PNG`);
+      console.log(`[ROLL]   Segment ${rollNum}: ${(rollPng.length / 1024 / 1024).toFixed(1)} MB PNG (RSS after: ${(memAfter.rss / 1024 / 1024).toFixed(0)}MB)`);
 
-      // Upload immediately, then release PNG buffer
+      // Upload immediately
       const rollPath = `${orderFolder}/${rollFileName}`;
       const { error: uploadError } = await sb.storage
         .from(bucket)
         .upload(rollPath, rollPng, { contentType: 'image/png', upsert: true });
 
       if (uploadError) {
-        console.error(`[ROLL]   Upload fail roll ${rollNum}: ${uploadError.message}`);
+        console.error(`[ROLL]   Upload fail segment ${rollNum}: ${uploadError.message}`);
         results.push({ error: uploadError.message, rollNum });
       } else {
         const { data: urlData } = sb.storage.from(bucket).getPublicUrl(rollPath);
@@ -436,29 +457,31 @@ app.post('/generate-roll', async (req, res) => {
           items: rollItems.length, lengthCm: contentHeightCm.toFixed(1),
           dimensions: `${canvasW}x${canvasH}px`
         });
-        // Keep lightweight reference for ZIP (only for multi-roll)
+        // Spill PNG to disk for ZIP (keeps RAM ~one segment, not the whole bundle)
         if (totalRolls > 1) {
-          rollPngBuffersForZip.push({ name: rollFileName, buffer: rollPng });
+          const tmpPath = path.join(tmpDir, rollFileName);
+          fs.writeFileSync(tmpPath, rollPng);
+          segmentTempFiles.push({ name: rollFileName, path: tmpPath });
         }
       }
 
-      // Hint GC between rolls (helps Node release sharp buffers)
-      if (totalRolls > 1 && global.gc) {
-        try { global.gc(); } catch (_) {}
-      }
+      // Release this segment's buffers before the next (force-free native sharp memory)
+      if (global.gc) { try { global.gc(); } catch (_) {} }
     }
 
     timer('Generate+Upload');
 
-    // ===== ZIP BUNDLE for multi-roll orders =====
+    // ===== ZIP BUNDLE for multi-segment orders (streamed from disk, bounded RAM) =====
     let zipResult = null;
-    if (totalRolls > 1 && rollPngBuffersForZip.length > 1) {
+    if (totalRolls > 1 && segmentTempFiles.length > 1 && tmpDir) {
       try {
-        console.log(`[ROLL] Building ZIP bundle (${rollPngBuffersForZip.length} rolls)...`);
-        const zipBuffer = buildZipBuffer(rollPngBuffersForZip);
-        const zipFileName = `${timestamp}_GS-DRS_${companySlug}${nameSlug}_COMPLEET_${totalRolls}rolls.zip`;
-        const zipPath = `${orderFolder}/${zipFileName}`;
+        console.log(`[ROLL] Building ZIP bundle (${segmentTempFiles.length} segments, from disk)...`);
+        const zipFileName = `${timestamp}_GS-DRS_${companySlug}${nameSlug}_COMPLEET_${totalRolls}segments.zip`;
+        const zipTmpPath = path.join(tmpDir, zipFileName);
+        buildZipFromFiles(segmentTempFiles, zipTmpPath);
 
+        const zipBuffer = fs.readFileSync(zipTmpPath);
+        const zipPath = `${orderFolder}/${zipFileName}`;
         const { error: zipUploadError } = await sb.storage
           .from(bucket)
           .upload(zipPath, zipBuffer, { contentType: 'application/zip', upsert: true });
@@ -476,15 +499,14 @@ app.post('/generate-roll', async (req, res) => {
       } catch (zipErr) {
         console.warn(`[ROLL] ZIP build failed: ${zipErr.message}`);
       }
-      // Release ZIP buffers
-      rollPngBuffersForZip.length = 0;
     }
 
     timer('ZIP');
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     const memFinal = process.memoryUsage();
-    console.log(`[ROLL] ✅ Done in ${elapsed}s — ${totalRolls} roll(s) — peak RSS: ${(memFinal.rss / 1024 / 1024).toFixed(0)}MB`);
+    peakRssMb = Math.max(peakRssMb, memFinal.rss / 1024 / 1024);
+    console.log(`[ROLL] ✅ Done in ${elapsed}s — ${totalRolls} segment(s) — peak RSS: ${peakRssMb.toFixed(0)}MB`);
 
     const firstRoll = results.find(r => r.rollUrl);
     res.json({
@@ -497,12 +519,17 @@ app.post('/generate-roll', async (req, res) => {
       zip: zipResult,
       elapsed: elapsed + 's',
       items: placed.length,
-      maxRollLengthCm: MAX_ROLL_LENGTH_CM
+      maxRollLengthCm: MAX_ROLL_LENGTH_CM,
+      segmentMaxCm: SEGMENT_MAX_CM,
+      peakRssMb: Math.round(peakRssMb)
     });
 
   } catch (err) {
     console.error('[ROLL] Error:', err);
     res.status(500).json({ error: err.message });
+  } finally {
+    // Always clean temp dir
+    if (tmpDir) { try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (_) {} }
   }
 });
 
@@ -580,10 +607,16 @@ app.post('/convert-tiff', tiffUpload.single('file'), async (req, res) => {
   }
 });
 
-// ===== START =====
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🖨️ GEK Roll Generator v3.1.0 running on port ${PORT}`);
-  console.log(`   Max roll: ${MAX_ROLL_LENGTH_CM}cm | TIFF Converter: /convert-tiff`);
-});
+// ===== START (only when run directly; exported for tests) =====
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`🖨️ GEK Roll Generator v3.2.0 running on port ${PORT}`);
+    console.log(`   Max roll: ${MAX_ROLL_LENGTH_CM}cm | Segment cap: ${SEGMENT_MAX_CM}cm | TIFF Converter: /convert-tiff`);
+  });
+}
 
+module.exports = {
+  app, splitIntoRolls, preResizeItems, generateRollImage, buildZipFromFiles, crc32,
+  PX_PER_CM, LABEL_HEIGHT_CM, GAP_AFTER_LABEL_CM, BOTTOM_GAP_CM, MAX_ROLL_LENGTH_CM, SEGMENT_MAX_CM
+};

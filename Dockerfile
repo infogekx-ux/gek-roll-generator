@@ -14,4 +14,5 @@ COPY src/ ./src/
 
 EXPOSE 3000
 
-CMD ["node", "src/index.js"]
+# --expose-gc lets the generator force-free native sharp buffers between segments (OOM fix)
+CMD ["node", "--expose-gc", "src/index.js"]
