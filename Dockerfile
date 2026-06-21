@@ -7,8 +7,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libvips-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY package.json ./
-RUN npm install --production
+COPY package.json package-lock.json ./
+RUN npm ci --production
 
 COPY src/ ./src/
 
