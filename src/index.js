@@ -359,6 +359,52 @@ app.post('/generate-roll', async (req, res) => {
 
     timer('Upload');
 
+    // ===== AUTO-SEND EMAIL with roll links =====
+    const allRollUrls = results.filter(r => r.rollUrl).map(r => r.rollUrl);
+    const allOriginalUrls = files.map(f => {
+      const path = f.storagePath || (orderFolder + '/' + f.name);
+      return SB_URL + '/storage/v1/object/public/' + bucket + '/' + path;
+    });
+    const downloadLinks = [...allRollUrls, ...allOriginalUrls];
+
+    const emailPayload = {
+      order_id: orderId,
+      product_type: config.productType || 'DTF ROLL',
+      customer_name: customer?.name || '',
+      customer_email: customer?.email || '',
+      customer_company: customer?.company || null,
+      customer_phone: customer?.phone || null,
+      customer_address: customer?.address || null,
+      customer_kvk: customer?.kvk || null,
+      customer_btw: customer?.btw || null,
+      customer_type: customer?.type || null,
+      printer_email: config.printerEmail || 'info.gekx@gmail.com',
+      printer_name: config.printerName || 'GEK | SAAS',
+      summary: `${files.length} bestanden | ${placed.length} items | ${totalLength.toFixed(1)}cm | ${totalRolls} roll(s)`,
+      download_links: downloadLinks,
+      total_price: null
+    };
+
+    try {
+      const emailResp = await fetch(SB_URL + '/functions/v1/send-order-email', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + SB_KEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(emailPayload)
+      });
+      const emailResult = await emailResp.json();
+      if (emailResp.ok) {
+        console.log('[ROLL] ✉️ Email sent:', emailResult.email_id);
+      } else {
+        console.error('[ROLL] ✉️ Email failed:', emailResult);
+      }
+    } catch (emailErr) {
+      console.error('[ROLL] ✉️ Email error:', emailErr.message);
+    }
+    timer('Email');
+
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     console.log(`[ROLL] ✅ Done in ${elapsed}s — ${totalRolls} roll(s)`);
 
