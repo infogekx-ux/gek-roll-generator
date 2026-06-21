@@ -16,7 +16,7 @@ app.use(express.json({ limit: '50mb' }));
 const SB_URL = process.env.SUPABASE_URL || 'https://dkihhmphimfqhyuzajwc.supabase.co';
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
 if (!SB_KEY) { console.error('[FATAL] SUPABASE_SERVICE_KEY not set!'); process.exit(1); }
-const sb = createClient(SB_URL, SB_KEY);
+const sb = createClient(SB_URL, SB_KEY, { realtime: { enabled: false }, auth: { persistSession: false, autoRefreshToken: false } });
 
 const PX_PER_CM = 118.11; // 300 DPI
 const LABEL_HEIGHT_CM = 3;
