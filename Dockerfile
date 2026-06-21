@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json ./
-RUN npm ci --production
+RUN npm install --omit=dev
 
 COPY src/ ./src/
 
